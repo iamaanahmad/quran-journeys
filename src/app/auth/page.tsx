@@ -14,6 +14,29 @@ const STORAGE_KEY = "quran-journeys-state";
 
 type AuthMode = "login" | "signup";
 
+function toAuthErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+  const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("email not confirmed") ||
+    normalized.includes("email_not_confirmed") ||
+    normalized.includes("confirm your email")
+  ) {
+    return "Your email is not confirmed yet. Please use the confirmation link from your inbox, then log in.";
+  }
+
+  if (normalized.includes("invalid login credentials")) {
+    return "Invalid email or password. Please try again.";
+  }
+
+  if (normalized.includes("too many requests")) {
+    return "Too many attempts. Please wait a moment and try again.";
+  }
+
+  return "Unable to authenticate. Check credentials and try again.";
+}
+
 export default function AuthPage() {
   return (
     <Suspense fallback={<div className="p-6 text-sm text-slate-700">Loading...</div>}>
@@ -86,8 +109,8 @@ function AuthPageContent() {
 
       await importLocalJourneyIfPresent();
       router.push(nextPath);
-    } catch {
-      setError("Unable to authenticate. Check credentials and try again.");
+    } catch (error) {
+      setError(toAuthErrorMessage(error));
     } finally {
       setLoading(false);
     }

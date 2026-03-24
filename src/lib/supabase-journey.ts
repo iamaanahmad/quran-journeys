@@ -47,6 +47,19 @@ export type SignUpResult =
   | { status: "authenticated"; user: AuthUser }
   | { status: "confirmation_required"; email: string };
 
+function getEmailRedirectTo(): string | undefined {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
+  if (fromEnv) {
+    return `${fromEnv.replace(/\/$/, "")}/auth?mode=login&next=/`;
+  }
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}/auth?mode=login&next=/`;
+  }
+
+  return undefined;
+}
+
 function normalizeUser(user: User): AuthUser {
   return {
     id: user.id,
@@ -81,11 +94,13 @@ export async function signUpWithEmail(
   name: string,
 ): Promise<SignUpResult> {
   const supabase = getSupabaseClient();
+  const emailRedirectTo = getEmailRedirectTo();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: { name },
+      emailRedirectTo,
     },
   });
 

@@ -1329,24 +1329,25 @@ export default function Home() {
               </button>
             </div>
 
-            <footer className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
-              <span>Legal</span>
-              <Link
-                href="/terms"
-                className="font-semibold text-emerald-900 underline"
-              >
-                Terms of Service
-              </Link>
-              <span>|</span>
-              <Link
-                href="/privacy"
-                className="font-semibold text-emerald-900 underline"
-              >
-                Privacy Policy
-              </Link>
-            </footer>
           </>
         )}
+
+        <footer className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
+          <span>Legal</span>
+          <Link
+            href="/terms"
+            className="font-semibold text-emerald-900 underline"
+          >
+            Terms of Service
+          </Link>
+          <span>|</span>
+          <Link
+            href="/privacy"
+            className="font-semibold text-emerald-900 underline"
+          >
+            Privacy Policy
+          </Link>
+        </footer>
       </main>
     </div>
   );
