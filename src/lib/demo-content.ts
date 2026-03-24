@@ -1,7 +1,7 @@
 import type { VerseItem } from "@/lib/types";
 
 const BASE_AUDIO_RECITER =
-  "https://verses.quran.com/Abu_Bakr_Ash-Shaatree_64kbps";
+  "https://verses.quran.com/Alafasy/mp3";
 
 export const DEMO_VERSES: VerseItem[] = [
   {

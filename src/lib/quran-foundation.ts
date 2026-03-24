@@ -18,7 +18,7 @@ function buildAudioUrl(verseKey: string): string {
   const [surahStr, ayahStr] = verseKey.split(":");
   const surah = surahStr.padStart(3, "0");
   const ayah = ayahStr.padStart(3, "0");
-  return `https://verses.quran.com/Abu_Bakr_Ash-Shaatree_64kbps/${surah}${ayah}.mp3`;
+  return `https://verses.quran.com/Alafasy/mp3/${surah}${ayah}.mp3`;
 }
 
 export async function fetchQuranFoundationVerses(
