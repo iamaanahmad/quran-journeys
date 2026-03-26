@@ -37,13 +37,23 @@ function getQfEnvironment(): QfEnvironment {
   return raw === "production" ? "production" : "prelive";
 }
 
+function isEndpointCompatibleWithEnv(url: string, env: QfEnvironment): boolean {
+  const normalized = url.toLowerCase();
+  if (env === "production") {
+    return !normalized.includes("apis-prelive.quran.foundation");
+  }
+
+  return !normalized.includes("apis.quran.foundation");
+}
+
 function getQfApiBaseUrl(): string {
+  const env = getQfEnvironment();
   const explicit = process.env.QF_USER_API_BASE_URL;
-  if (explicit) {
+  if (explicit && isEndpointCompatibleWithEnv(explicit, env)) {
     return explicit.replace(/\/$/, "");
   }
 
-  return getQfEnvironment() === "production"
+  return env === "production"
     ? "https://apis.quran.foundation"
     : "https://apis-prelive.quran.foundation";
 }
@@ -86,8 +96,9 @@ function buildHeaders(auth: UserApiAuth, isWrite: boolean): Record<string, strin
 }
 
 function buildRemoteReadEndpoints(userId: string): string[] {
+  const env = getQfEnvironment();
   const explicit = process.env.QF_USER_PROGRESS_ENDPOINT;
-  if (explicit) {
+  if (explicit && isEndpointCompatibleWithEnv(explicit, env)) {
     const normalized = explicit.replace(/\/$/, "");
     if (normalized.includes("{userId}")) {
       return [normalized.replace("{userId}", encodeURIComponent(userId))];

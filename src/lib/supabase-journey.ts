@@ -50,11 +50,11 @@ export type SignUpResult =
 function getEmailRedirectTo(): string | undefined {
   const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (fromEnv) {
-    return `${fromEnv.replace(/\/$/, "")}/auth?mode=login&next=/`;
+    return `${fromEnv.replace(/\/$/, "")}/auth?mode=login&next=/app`;
   }
 
   if (typeof window !== "undefined" && window.location?.origin) {
-    return `${window.location.origin}/auth?mode=login&next=/`;
+    return `${window.location.origin}/auth?mode=login&next=/app`;
   }
 
   return undefined;
