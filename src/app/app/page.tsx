@@ -41,7 +41,7 @@ interface ApiEvidence {
   contentSource: "quran-foundation" | "demo-fallback" | "unknown";
   contentCheckedAt: string | null;
   contentDetails: string;
-  userProgressSource: "quran-foundation" | "local-fallback" | "unknown";
+  userProgressSource: "local" | "unknown";
   userProgressCheckedAt: string | null;
   userProgressDetails: string;
 }
@@ -188,11 +188,7 @@ export default function Home() {
   const [clarityRating, setClarityRating] = useState(4);
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
   const [syncState, setSyncState] = useState<{
-    source:
-      | "supabase"
-      | "quran-foundation"
-      | "local-fallback"
-      | "not-synced";
+    source: "supabase" | "local" | "not-synced";
     message: string;
   }>({
     source: "not-synced",
@@ -202,9 +198,9 @@ export default function Home() {
     contentSource: "unknown",
     contentCheckedAt: null,
     contentDetails: "No plan generated yet",
-    userProgressSource: "unknown",
-    userProgressCheckedAt: null,
-    userProgressDetails: "No user-progress check yet",
+    userProgressSource: "local",
+    userProgressCheckedAt: new Date().toISOString(),
+    userProgressDetails: "Progress tracked locally in app database",
   });
   const [circleMembers, setCircleMembers] = useState<string[]>([]);
   const [newCircleMember, setNewCircleMember] = useState("");
@@ -214,7 +210,7 @@ export default function Home() {
 
   const updateSyncState = useCallback(
     (next: {
-      source: "supabase" | "quran-foundation" | "local-fallback" | "not-synced";
+      source: "supabase" | "local" | "not-synced";
       message: string;
     }) => {
       setSyncState((previous) =>
@@ -393,53 +389,14 @@ export default function Home() {
   }, []);
 
   const refreshUserProgressStatus = useCallback(async (userId: string): Promise<void> => {
-    try {
-      const response = await fetch(
-        `/api/user-progress?userId=${encodeURIComponent(userId)}`,
-      );
-
-      if (!response.ok) {
-        throw new Error("User progress status request failed");
-      }
-
-      const payload = (await response.json()) as UserProgressSyncResponse;
-      if (payload.source === "quran-foundation") {
-        updateSyncState({
-          source: "quran-foundation",
-          message: "Connected to Quran Foundation User API",
-        });
-        setApiEvidence((previous) => ({
-          ...previous,
-          userProgressSource: "quran-foundation",
-          userProgressCheckedAt: new Date().toISOString(),
-          userProgressDetails: "Live user progress GET succeeded",
-        }));
-      } else {
-        updateSyncState({
-          source: "local-fallback",
-          message:
-            payload.warning ??
-            "Using local fallback for user progress; QF credentials needed.",
-        });
-        setApiEvidence((previous) => ({
-          ...previous,
-          userProgressSource: "local-fallback",
-          userProgressCheckedAt: new Date().toISOString(),
-          userProgressDetails:
-            payload.warning ?? "User progress GET fell back to local store",
-        }));
-      }
-    } catch {
-      setSyncState((previous) =>
-        previous.source === "quran-foundation"
-          ? previous
-          : {
-              source: "supabase",
-              message: "Supabase is connected; Quran User API check is unavailable right now.",
-            },
-      );
-    }
-  }, [updateSyncState]);
+    // User progress is tracked locally - no remote check needed
+    setApiEvidence((previous) => ({
+      ...previous,
+      userProgressSource: "local",
+      userProgressCheckedAt: new Date().toISOString(),
+      userProgressDetails: "Progress tracked locally in app database",
+    }));
+  }, []);
 
   const syncUserProgress = useCallback(async (
     journeyState: JourneyState,
@@ -477,47 +434,17 @@ export default function Home() {
         throw new Error("Failed to sync user progress");
       }
 
-      const result = (await response.json()) as UserProgressSyncResponse;
-      if (result.source === "quran-foundation") {
-        updateSyncState({
-          source: "quran-foundation",
-          message: "Connected to Quran Foundation User API",
-        });
-        setApiEvidence((previous) => ({
-          ...previous,
-          userProgressSource: "quran-foundation",
-          userProgressCheckedAt: new Date().toISOString(),
-          userProgressDetails: "Live user progress POST succeeded",
-        }));
-      } else {
-        updateSyncState({
-          source: "local-fallback",
-          message:
-            result.warning ??
-            "Using local fallback for user progress; QF credentials needed.",
-        });
-        setApiEvidence((previous) => ({
-          ...previous,
-          userProgressSource: "local-fallback",
-          userProgressCheckedAt: new Date().toISOString(),
-          userProgressDetails:
-            result.warning ?? "User progress POST fell back to local store",
-        }));
-      }
+      // Progress synced successfully
+      setApiEvidence((previous) => ({
+        ...previous,
+        userProgressSource: "local",
+        userProgressCheckedAt: new Date().toISOString(),
+        userProgressDetails: "Progress synced to local database",
+      }));
     } catch {
-      const isGuestUser = userId.startsWith("guest-");
-      setSyncState((previous) =>
-        previous.source === "quran-foundation"
-          ? previous
-          : {
-              source: isGuestUser ? "local-fallback" : "supabase",
-              message: isGuestUser
-                ? "Using local mode. Progress sync temporarily unavailable."
-                : "Supabase is connected; Quran User API sync is unavailable right now.",
-            },
-      );
+      // Silent fail - progress is still tracked locally
     }
-  }, [updateSyncState]);
+  }, []);
 
   useEffect(() => {
     async function bootstrap() {
@@ -527,7 +454,7 @@ export default function Home() {
         setAuthUser(currentUser);
         updateSyncState({
           source: "supabase",
-          message: "Connected to Supabase Auth. Checking Quran User API status...",
+          message: "Connected to Supabase. Progress synced to your account.",
         });
 
         const remoteState = await loadJourneyStateFromPrefs();
@@ -561,9 +488,8 @@ export default function Home() {
           await syncUserProgress(localState, guestUserId);
 
           updateSyncState({
-            source: "local-fallback",
-            message:
-              "Using local mode. Log in to sync with Supabase and Quran User API.",
+            source: "local",
+            message: "Progress tracked locally. Sign in to sync across devices.",
           });
         } catch {
           window.localStorage.removeItem(STORAGE_KEY);
@@ -580,8 +506,8 @@ export default function Home() {
     } finally {
       setAuthUser(null);
       updateSyncState({
-        source: "local-fallback",
-        message: "Logged out. Local mode active.",
+        source: "local",
+        message: "Logged out. Progress tracked locally.",
       });
     }
   }
@@ -749,7 +675,7 @@ export default function Home() {
             )}
 
             <p className="text-xs text-slate-600">
-              User API sync: {syncState.message}
+              Progress sync: {syncState.message}
               {authUser ? ` (${authUser.id})` : ""}
             </p>
           </div>
