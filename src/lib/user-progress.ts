@@ -107,14 +107,14 @@ function buildRemoteReadEndpoints(userId: string): string[] {
   }
 
   const base = getQfApiBaseUrl();
-  // User APIs use /user-api/v1/ path prefix
-  return [`${base}/user-api/v1/streaks/current-streak-days?type=QURAN`];
+  // User APIs use /auth/v1/ path prefix
+  return [`${base}/auth/v1/streaks/current-streak-days?type=QURAN`];
 }
 
 function buildRemoteWriteEndpoints(): string[] {
   const base = getQfApiBaseUrl();
-  // User APIs use /user-api/v1/ path prefix
-  return [`${base}/user-api/v1/reading-sessions`];
+  // User APIs use /auth/v1/ path prefix
+  return [`${base}/auth/v1/reading-sessions`];
 }
 
 function parseAyahKey(
