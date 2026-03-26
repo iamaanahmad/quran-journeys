@@ -63,7 +63,8 @@ export async function GET() {
 
       if (basicAuthResponse.ok && (basicAuthJson as any).access_token) {
         // Test the token with streak API
-        const streakUrl = "https://apis.quran.foundation/v1/streaks/current-streak-days?type=QURAN";
+        const apiBaseUrl = process.env.QF_USER_API_BASE_URL || "https://apis-prelive.quran.foundation";
+        const streakUrl = `${apiBaseUrl}/v1/streaks/current-streak-days?type=QURAN`;
         const streakResponse = await fetch(streakUrl, {
           method: "GET",
           headers: {
@@ -128,7 +129,8 @@ export async function GET() {
 
         if (bodyAuthResponse.ok && (bodyAuthJson as any).access_token) {
           // Test the token with streak API
-          const streakUrl = "https://apis.quran.foundation/v1/streaks/current-streak-days?type=QURAN";
+          const apiBaseUrl = process.env.QF_USER_API_BASE_URL || "https://apis-prelive.quran.foundation";
+          const streakUrl = `${apiBaseUrl}/v1/streaks/current-streak-days?type=QURAN`;
           const streakResponse = await fetch(streakUrl, {
             method: "GET",
             headers: {
