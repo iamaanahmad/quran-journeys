@@ -460,6 +460,15 @@ export default function Home() {
         const remoteState = await loadJourneyStateFromPrefs();
         if (remoteState) {
           setState(remoteState);
+          // Reset API evidence for loaded state
+          setApiEvidence({
+            contentSource: "unknown",
+            contentCheckedAt: new Date().toISOString(),
+            contentDetails: `Loaded existing plan. Generate a new plan to see live API evidence.`,
+            userProgressSource: "local",
+            userProgressCheckedAt: new Date().toISOString(),
+            userProgressDetails: "Progress tracked locally in app database",
+          });
           await refreshUserProgressStatus(currentUser.id);
           return;
         }
@@ -469,6 +478,15 @@ export default function Home() {
             const localState = JSON.parse(localRaw) as JourneyState;
             await saveJourneyStateToPrefs(localState);
             setState(localState);
+            // Reset API evidence for loaded state
+            setApiEvidence({
+              contentSource: "unknown",
+              contentCheckedAt: new Date().toISOString(),
+              contentDetails: `Loaded existing plan. Generate a new plan to see live API evidence.`,
+              userProgressSource: "local",
+              userProgressCheckedAt: new Date().toISOString(),
+              userProgressDetails: "Progress tracked locally in app database",
+            });
             await syncUserProgress(localState, currentUser.id);
             return;
           } catch {
@@ -486,6 +504,16 @@ export default function Home() {
 
           const guestUserId = getProgressUserId(null);
           await syncUserProgress(localState, guestUserId);
+
+          // Reset API evidence for loaded state
+          setApiEvidence({
+            contentSource: "unknown",
+            contentCheckedAt: new Date().toISOString(),
+            contentDetails: `Loaded existing plan. Generate a new plan to see live API evidence.`,
+            userProgressSource: "local",
+            userProgressCheckedAt: new Date().toISOString(),
+            userProgressDetails: "Progress tracked locally in app database",
+          });
 
           updateSyncState({
             source: "local",
