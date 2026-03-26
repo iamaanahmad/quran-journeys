@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f8f4e8;
+  --foreground: #102018;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-manrope);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-manrope), sans-serif;
+}
+
+p,
+li,
+label,
+input,
+button,
+textarea,
+select {
+  letter-spacing: 0.01em;
+}
+
+[lang="ar"],
+.arabic {
+  font-family: var(--font-naskh), serif;
+}
