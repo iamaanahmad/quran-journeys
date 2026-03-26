@@ -262,6 +262,42 @@ export default function Home() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state, authUser]);
 
+  useEffect(() => {
+    if (!state) {
+      setApiEvidence((previous) => ({
+        ...previous,
+        contentSource: "unknown",
+        contentCheckedAt: null,
+        contentDetails: "No plan loaded yet",
+      }));
+      return;
+    }
+
+    if (apiEvidence.contentCheckedAt) {
+      return;
+    }
+
+    if (!state.plan.length) {
+      setApiEvidence((previous) => ({
+        ...previous,
+        contentSource: "unknown",
+        contentCheckedAt: new Date().toISOString(),
+        contentDetails: "Loaded journey has no plan items yet",
+      }));
+      return;
+    }
+
+    const firstDay = state.plan[0];
+    const lastDay = state.plan[state.plan.length - 1];
+
+    setApiEvidence((previous) => ({
+      ...previous,
+      contentSource: "unknown",
+      contentCheckedAt: new Date().toISOString(),
+      contentDetails: `Loaded plan ${firstDay.fromAyahKey} -> ${lastDay.toAyahKey}. Source metadata unavailable for persisted plan.`,
+    }));
+  }, [state, apiEvidence.contentCheckedAt]);
+
   const currentDay = useMemo(() => {
     if (!state?.plan.length) {
       return null;

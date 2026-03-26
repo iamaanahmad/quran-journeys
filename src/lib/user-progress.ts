@@ -159,6 +159,7 @@ function buildFallbackWarning(
   mode: "read" | "write",
   endpoint?: string,
   statusCode?: number,
+  missingConfigKeys: string[] = [],
 ): string {
   const endpointText = endpoint ? ` endpoint=${endpoint}.` : "";
 
@@ -174,8 +175,29 @@ function buildFallbackWarning(
     return `Using local fallback. Quran User API returned ${statusCode}.${endpointText} Remote service may be temporarily unavailable.`;
   }
 
+  if (missingConfigKeys.length > 0) {
+    return `Using local fallback. Missing server env: ${missingConfigKeys.join(", ")}. Configure these in deployment environment and redeploy.`;
+  }
+
   const modeText = mode === "read" ? "streak read" : "reading session write";
   return `Using local fallback. Live User API ${modeText} is not configured or unavailable. Set QF_ENV, QF_CLIENT_ID/QF_CLIENT_SECRET (or QURAN_CLIENT_ID/QURAN_CLIENT_SECRET), and optional QF_USER_PROGRESS_ENDPOINT.`;
+}
+
+function getMissingUserApiConfig(): string[] {
+  const staticApiKey = process.env.QF_USER_API_KEY?.trim();
+  if (staticApiKey) {
+    return [];
+  }
+
+  const missing: string[] = [];
+  if (!getConfiguredClientId()) {
+    missing.push("QF_CLIENT_ID|QURAN_CLIENT_ID");
+  }
+  if (!getConfiguredClientSecret()) {
+    missing.push("QF_CLIENT_SECRET|QURAN_CLIENT_SECRET");
+  }
+
+  return missing;
 }
 
 async function getUserApiAuth(): Promise<UserApiAuth | null> {
@@ -321,6 +343,7 @@ export async function syncUserProgress(
 ): Promise<UserProgressSyncResponse> {
   const endpoints = buildRemoteWriteEndpoints();
   const auth = await getUserApiAuth();
+  const missingConfigKeys = auth ? [] : getMissingUserApiConfig();
   const readingSession = parseAyahKey(payload.lastReadAyahKey);
   let lastStatusCode: number | undefined;
   let lastEndpoint: string | undefined;
@@ -356,7 +379,7 @@ export async function syncUserProgress(
     ok: true,
     source: LOCAL_SOURCE,
     progress: upsertLocalProgress(payload),
-    warning: buildFallbackWarning("write", lastEndpoint, lastStatusCode),
+    warning: buildFallbackWarning("write", lastEndpoint, lastStatusCode, missingConfigKeys),
   };
 }
 
@@ -365,6 +388,7 @@ export async function fetchUserProgress(
 ): Promise<UserProgressSyncResponse> {
   const endpoints = buildRemoteReadEndpoints(userId);
   const auth = await getUserApiAuth();
+  const missingConfigKeys = auth ? [] : getMissingUserApiConfig();
   let lastStatusCode: number | undefined;
   let lastEndpoint: string | undefined;
 
@@ -406,6 +430,6 @@ export async function fetchUserProgress(
     ok: true,
     source: LOCAL_SOURCE,
     progress: getLocalProgress(userId),
-    warning: buildFallbackWarning("read", lastEndpoint, lastStatusCode),
+    warning: buildFallbackWarning("read", lastEndpoint, lastStatusCode, missingConfigKeys),
   };
 }
