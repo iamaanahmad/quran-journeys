@@ -4,7 +4,7 @@ import type {
   UserProgressSyncResponse,
 } from "@/lib/types";
 
-const LOCAL_SOURCE = "local" as const;
+const LOCAL_SOURCE = "local-fallback" as const;
 
 type LocalStore = Map<string, UserProgressSummary>;
 
