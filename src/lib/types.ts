@@ -92,4 +92,7 @@ export interface UserProgressSyncResponse {
   source: "quran-foundation" | "local-fallback";
   progress: UserProgressSummary;
   warning?: string;
+  apiEndpoint?: string;
+  status?: number;
+  remoteDetails?: string;
 }

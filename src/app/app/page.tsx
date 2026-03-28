@@ -41,7 +41,7 @@ interface ApiEvidence {
   contentSource: "quran-foundation" | "demo-fallback" | "unknown";
   contentCheckedAt: string | null;
   contentDetails: string;
-  userProgressSource: "local" | "unknown";
+  userProgressSource: "local" | "quran-foundation" | "unknown";
   userProgressCheckedAt: string | null;
   userProgressDetails: string;
 }
@@ -389,13 +389,36 @@ export default function Home() {
   }, []);
 
   const refreshUserProgressStatus = useCallback(async (userId: string): Promise<void> => {
-    // User progress is tracked locally - no remote check needed
-    setApiEvidence((previous) => ({
-      ...previous,
-      userProgressSource: "local",
-      userProgressCheckedAt: new Date().toISOString(),
-      userProgressDetails: "Progress tracked locally in app database",
-    }));
+    try {
+      const response = await fetch(`/api/user-progress?userId=${encodeURIComponent(userId)}`);
+
+      if (!response.ok) {
+        throw new Error(`User API status check failed: ${response.status}`);
+      }
+
+      const payload = (await response.json()) as UserProgressSyncResponse;
+      const source = payload.source === "quran-foundation" ? "quran-foundation" : "local";
+      const details = payload.warning
+        ? `${payload.remoteDetails ?? ""}; ${payload.warning}`
+        : payload.remoteDetails ?? "Progress synced from Quran Foundation User API";
+
+      setApiEvidence((previous) => ({
+        ...previous,
+        userProgressSource: source,
+        userProgressCheckedAt: new Date().toISOString(),
+        userProgressDetails: `${details} (status ${payload.status ?? response.status})`,
+      }));
+    } catch (error) {
+      setApiEvidence((previous) => ({
+        ...previous,
+        userProgressSource: "local",
+        userProgressCheckedAt: new Date().toISOString(),
+        userProgressDetails:
+          error instanceof Error
+            ? `User progress fallback: ${error.message}`
+            : "User progress fallback to local",
+      }));
+    }
   }, []);
 
   const syncUserProgress = useCallback(async (
@@ -431,18 +454,32 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to sync user progress");
+        throw new Error(`Failed to sync user progress (${response.status})`);
       }
 
-      // Progress synced successfully
+      const result = (await response.json()) as UserProgressSyncResponse;
+
+      const source = result.source === "quran-foundation" ? "quran-foundation" : "local";
+      const details = result.warning
+        ? `${result.remoteDetails ?? ""}; ${result.warning}`
+        : result.remoteDetails ?? "Progress synced through user-progress endpoint";
+
+      setApiEvidence((previous) => ({
+        ...previous,
+        userProgressSource: source,
+        userProgressCheckedAt: new Date().toISOString(),
+        userProgressDetails: `${details} (status ${result.status ?? response.status})`,
+      }));
+    } catch (error) {
       setApiEvidence((previous) => ({
         ...previous,
         userProgressSource: "local",
         userProgressCheckedAt: new Date().toISOString(),
-        userProgressDetails: "Progress synced to local database",
+        userProgressDetails:
+          error instanceof Error
+            ? `User API sync failed, local fallback: ${error.message}`
+            : "User API sync failed, local fallback",
       }));
-    } catch {
-      // Silent fail - progress is still tracked locally
     }
   }, []);
 

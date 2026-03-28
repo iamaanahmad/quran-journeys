@@ -6,6 +6,16 @@ import type {
 
 const LOCAL_SOURCE = "local-fallback" as const;
 
+const quranEnv = (process.env.QF_ENV ?? process.env.NEXT_PUBLIC_QF_ENV ?? "prelive").trim();
+const quranEndpoint = (process.env.QF_USER_PROGRESS_ENDPOINT ?? "").trim();
+const quranBaseUrl = (process.env.QF_USER_API_BASE_URL ?? "").trim();
+const quranApiKey = (process.env.QF_USER_API_KEY ?? "").trim();
+
+const defaultBaseByEnv: Record<string, string> = {
+  production: "https://apis.quran.foundation",
+  prelive: "https://apis-prelive.quran.foundation",
+};
+
 type LocalStore = Map<string, UserProgressSummary>;
 
 declare global {
@@ -53,22 +63,200 @@ function getLocalProgress(userId: string): UserProgressSummary {
   return empty;
 }
 
+function buildApiUrl(userId: string): string | null {
+  if (quranEndpoint) {
+    if (quranEndpoint.includes("{userId}")) {
+      return quranEndpoint.replace("{userId}", encodeURIComponent(userId));
+    }
+    return quranEndpoint;
+  }
+
+  const base = quranBaseUrl || defaultBaseByEnv[quranEnv] || defaultBaseByEnv.prelive;
+
+  if (!base) {
+    return null;
+  }
+
+  return `${base.replace(/\/$/, "")}/user-progress/${encodeURIComponent(userId)}`;
+}
+
+function normalizeRemoteProgress(
+  value: unknown,
+  userId: string,
+): UserProgressSummary {
+  const now = new Date().toISOString();
+
+  if (typeof value === "object" && value !== null) {
+    const rec = value as Record<string, unknown>;
+
+    const streakDays =
+      typeof rec.streakDays === "number"
+        ? rec.streakDays
+        : typeof rec.currentStreakDays === "number"
+          ? rec.currentStreakDays
+          : 0;
+
+    const completedSessions =
+      typeof rec.completedSessions === "number" ? rec.completedSessions : 0;
+
+    const minutesThisMonth =
+      typeof rec.minutesThisMonth === "number" ? rec.minutesThisMonth : 0;
+
+    const totalMinutes =
+      typeof rec.totalMinutes === "number" ? rec.totalMinutes : 0;
+
+    const lastSessionDate =
+      typeof rec.lastSessionDate === "string" ? rec.lastSessionDate : null;
+
+    return {
+      userId,
+      streakDays,
+      completedSessions,
+      minutesThisMonth,
+      totalMinutes,
+      lastSessionDate,
+      updatedAt: now,
+    };
+  }
+
+  return {
+    userId,
+    streakDays: 0,
+    completedSessions: 0,
+    minutesThisMonth: 0,
+    totalMinutes: 0,
+    lastSessionDate: null,
+    updatedAt: now,
+  };
+}
+
+async function tryFetchRemoteProgress(
+  userId: string,
+): Promise<Pick<UserProgressSyncResponse, "progress" | "status" | "apiEndpoint" | "remoteDetails">> {
+  const apiUrl = buildApiUrl(userId);
+  if (!apiUrl) {
+    throw new Error("No Quran User API endpoint configured");
+  }
+
+  const headers = new Headers({ Accept: "application/json" });
+  if (quranApiKey) {
+    headers.set("Authorization", `Bearer ${quranApiKey}`);
+  }
+
+  const response = await fetch(apiUrl, {
+    method: "GET",
+    headers,
+  });
+
+  const status = response.status;
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Quran User API GET failed ${status} ${text}`);
+  }
+
+  const payload = await response.json();
+
+  return {
+    progress: normalizeRemoteProgress(payload, userId),
+    status,
+    apiEndpoint: apiUrl,
+    remoteDetails: "GET remote user progress successful",
+  };
+}
+
+async function trySyncRemoteProgress(
+  payload: UserProgressSyncRequest,
+): Promise<Pick<UserProgressSyncResponse, "progress" | "status" | "apiEndpoint" | "remoteDetails">> {
+  const apiUrl = buildApiUrl(payload.userId);
+  if (!apiUrl) {
+    throw new Error("No Quran User API endpoint configured");
+  }
+
+  const headers = new Headers({ "Content-Type": "application/json", Accept: "application/json" });
+  if (quranApiKey) {
+    headers.set("Authorization", `Bearer ${quranApiKey}`);
+  }
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  const status = response.status;
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Quran User API POST failed ${status} ${text}`);
+  }
+
+  const payloadResponse = await response.json();
+
+  return {
+    progress: normalizeRemoteProgress(payloadResponse, payload.userId),
+    status,
+    apiEndpoint: apiUrl,
+    remoteDetails: "POST remote user progress successful",
+  };
+}
+
 export async function syncUserProgress(
   payload: UserProgressSyncRequest,
 ): Promise<UserProgressSyncResponse> {
-  return {
-    ok: true,
-    source: LOCAL_SOURCE,
-    progress: upsertLocalProgress(payload),
-  };
+  try {
+    const remote = await trySyncRemoteProgress(payload);
+    return {
+      ok: true,
+      source: "quran-foundation",
+      progress: remote.progress,
+      apiEndpoint: remote.apiEndpoint,
+      status: remote.status,
+      remoteDetails: remote.remoteDetails,
+    };
+  } catch (error) {
+    const fallback = upsertLocalProgress(payload);
+    return {
+      ok: true,
+      source: LOCAL_SOURCE,
+      progress: fallback,
+      warning:
+        error instanceof Error
+          ? `Fallback to local because: ${error.message}`
+          : "Fallback to local user progress",
+      apiEndpoint: buildApiUrl(payload.userId) ?? undefined,
+      status: undefined,
+      remoteDetails: "Falling back to local progress",
+    };
+  }
 }
 
 export async function fetchUserProgress(
   userId: string,
 ): Promise<UserProgressSyncResponse> {
-  return {
-    ok: true,
-    source: LOCAL_SOURCE,
-    progress: getLocalProgress(userId),
-  };
+  try {
+    const remote = await tryFetchRemoteProgress(userId);
+    return {
+      ok: true,
+      source: "quran-foundation",
+      progress: remote.progress,
+      apiEndpoint: remote.apiEndpoint,
+      status: remote.status,
+      remoteDetails: remote.remoteDetails,
+    };
+  } catch (error) {
+    const fallback = getLocalProgress(userId);
+    return {
+      ok: true,
+      source: LOCAL_SOURCE,
+      progress: fallback,
+      warning:
+        error instanceof Error
+          ? `Fallback to local because: ${error.message}`
+          : "Fallback to local user progress",
+      apiEndpoint: buildApiUrl(userId) ?? undefined,
+      status: undefined,
+      remoteDetails: "Falling back to local progress",
+    };
+  }
 }

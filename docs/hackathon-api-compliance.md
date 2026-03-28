@@ -64,8 +64,9 @@ The Quran Foundation User APIs (streaks, bookmarks, etc.) require:
 Our app provides a **standalone experience** where:
 - Users create accounts in our app (via Supabase)
 - We track their progress independently
-- No dependency on external user accounts
-- Full control over user experience
+- We also attempt Quran Foundation User API sync when `QF_USER_PROGRESS_ENDPOINT` or `QF_USER_API_BASE_URL` is configured
+- Live API evidence is shown in the dashboard panel
+- Full control over user experience with optional external sync
 
 This is similar to how many Quran apps work - they implement their own progress tracking rather than requiring users to have Quran.com accounts.
 
