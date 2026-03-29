@@ -100,7 +100,9 @@ npm run dev
 - `QF_CLIENT_SECRET` or `QURAN_CLIENT_SECRET` (required for OAuth mode): client secret (server-side only)
 - `QF_USER_PROGRESS_ENDPOINT` (optional): exact User API progress endpoint, e.g. `https://.../user-progress/{userId}`
 - `QF_USER_API_BASE_URL` (optional alternative to endpoint): base URL for User API
-- `QF_USER_API_KEY` (optional): static bearer token if your environment uses one
+- `QF_USER_API_KEY` (optional): static bearer token if your environment uses one; if missing, app will use `QF_CLIENT_ID` + `QF_CLIENT_SECRET` to fetch access token from `QF_OAUTH_ENDPOINT`
+- `QF_OAUTH_ENDPOINT` (optional): OAuth2 token endpoint host (default `https://oauth2.quran.foundation`)
+
 
 Without API keys/endpoints, the app still works in fallback mode.
 

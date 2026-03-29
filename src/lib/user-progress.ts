@@ -10,6 +10,9 @@ const quranEnv = (process.env.QF_ENV ?? process.env.NEXT_PUBLIC_QF_ENV ?? "preli
 const quranEndpoint = (process.env.QF_USER_PROGRESS_ENDPOINT ?? "").trim();
 const quranBaseUrl = (process.env.QF_USER_API_BASE_URL ?? "").trim();
 const quranApiKey = (process.env.QF_USER_API_KEY ?? "").trim();
+const qfOAuthEndpoint = (process.env.QF_OAUTH_ENDPOINT ?? "https://oauth2.quran.foundation").trim();
+const qfClientId = (process.env.QF_CLIENT_ID ?? process.env.QURAN_CLIENT_ID ?? "").trim();
+const qfClientSecret = (process.env.QF_CLIENT_SECRET ?? process.env.QURAN_CLIENT_SECRET ?? "").trim();
 
 const defaultBaseByEnv: Record<string, string> = {
   production: "https://apis.quran.foundation",
@@ -130,6 +133,41 @@ function normalizeRemoteProgress(
   };
 }
 
+async function getQuranFoundationAuthToken(): Promise<string | undefined> {
+  if (quranApiKey) {
+    return quranApiKey;
+  }
+
+  if (!qfClientId || !qfClientSecret || !qfOAuthEndpoint) {
+    return undefined;
+  }
+
+  const tokenUrl = `${qfOAuthEndpoint.replace(/\/$/, "")}/oauth/token`;
+  const tokenResponse = await fetch(tokenUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: qfClientId,
+      client_secret: qfClientSecret,
+    }).toString(),
+  });
+
+  if (!tokenResponse.ok) {
+    throw new Error(`Quran Foundation token exchange failed ${tokenResponse.status}`);
+  }
+
+  const tokenPayload = await tokenResponse.json();
+  if (typeof tokenPayload.access_token === "string") {
+    return tokenPayload.access_token;
+  }
+
+  throw new Error("Quran Foundation token response missing access_token");
+}
+
 async function tryFetchRemoteProgress(
   userId: string,
 ): Promise<Pick<UserProgressSyncResponse, "progress" | "status" | "apiEndpoint" | "remoteDetails">> {
@@ -139,8 +177,16 @@ async function tryFetchRemoteProgress(
   }
 
   const headers = new Headers({ Accept: "application/json" });
-  if (quranApiKey) {
-    headers.set("Authorization", `Bearer ${quranApiKey}`);
+  try {
+    const token = await getQuranFoundationAuthToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  } catch (error) {
+    // proceed without token; the endpoint can still be hit with anonymous request.
+    if (error instanceof Error) {
+      throw new Error(`Auth token fetch failed: ${error.message}`);
+    }
   }
 
   const response = await fetch(apiUrl, {
@@ -174,8 +220,16 @@ async function trySyncRemoteProgress(
   }
 
   const headers = new Headers({ "Content-Type": "application/json", Accept: "application/json" });
-  if (quranApiKey) {
-    headers.set("Authorization", `Bearer ${quranApiKey}`);
+  try {
+    const token = await getQuranFoundationAuthToken();
+    if (token) {
+      headers.set("Authorization", `Bearer ${token}`);
+    }
+  } catch (error) {
+    // if auth token exchange failed, we still attempt remote call (may fallback later)
+    if (error instanceof Error) {
+      throw new Error(`Auth token fetch failed: ${error.message}`);
+    }
   }
 
   const response = await fetch(apiUrl, {
