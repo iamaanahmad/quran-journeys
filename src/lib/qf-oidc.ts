@@ -33,7 +33,7 @@ export function generateStateToken(): string {
   return base64Url(randomBytes(24));
 }
 
-export function getQfOidcConfig(): QfOidcConfig {
+export function getQfOidcConfig(origin?: string): QfOidcConfig {
   const env = (process.env.QF_ENV ?? process.env.NEXT_PUBLIC_QF_ENV ?? "prelive").trim();
   const clientId = (process.env.QF_CLIENT_ID ?? process.env.QURAN_CLIENT_ID ?? "").trim();
   const clientSecret = (process.env.QF_CLIENT_SECRET ?? process.env.QURAN_CLIENT_SECRET ?? "").trim();
@@ -44,8 +44,10 @@ export function getQfOidcConfig(): QfOidcConfig {
     defaultOauthByEnv.prelive;
 
   const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").trim();
+  const originUrl = (origin ?? "").trim();
   const redirectUri =
     (process.env.QF_OAUTH_REDIRECT_URI ?? "").trim() ||
+    (originUrl ? `${originUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "") ||
     (appUrl ? `${appUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "");
 
   const scope = (process.env.QF_OAUTH_SCOPE ?? "openid profile offline_access").trim();

@@ -54,7 +54,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const config = getQfOidcConfig();
+  const config = getQfOidcConfig(url.origin);
   const tokenUrl = `${config.oauthBaseUrl}/oauth2/token`;
 
   const tokenResponse = await fetch(tokenUrl, {
