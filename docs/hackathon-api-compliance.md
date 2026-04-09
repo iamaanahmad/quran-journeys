@@ -65,6 +65,7 @@ Our app provides a **standalone experience** where:
 - Users create accounts in our app (via Supabase)
 - We track their progress independently
 - We also attempt Quran Foundation User API sync when `QF_USER_PROGRESS_ENDPOINT` or `QF_USER_API_BASE_URL` is configured
+- If `QF_USER_API_KEY` is unavailable, we automatically exchange `QF_CLIENT_ID`/`QF_CLIENT_SECRET` against `QF_OAUTH_ENDPOINT` for an access token
 - Live API evidence is shown in the dashboard panel
 - Full control over user experience with optional external sync
 

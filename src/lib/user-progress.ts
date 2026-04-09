@@ -7,13 +7,13 @@ import type {
 const LOCAL_SOURCE = "local-fallback" as const;
 
 const quranEnv = (process.env.QF_ENV ?? process.env.NEXT_PUBLIC_QF_ENV ?? "prelive").trim();
-const quranEndpoint = (process.env.QF_USER_PROGRESS_ENDPOINT ?? "").trim();
 const quranBaseUrl = (process.env.QF_USER_API_BASE_URL ?? "").trim();
 const quranApiKey = (process.env.QF_USER_API_KEY ?? "").trim();
+const qfClientId = (process.env.QF_CLIENT_ID ?? process.env.QURAN_CLIENT_ID ?? "").trim();
 
 const defaultBaseByEnv: Record<string, string> = {
-  production: "https://apis.quran.foundation",
-  prelive: "https://apis-prelive.quran.foundation",
+  production: "https://apis.quran.foundation/auth",
+  prelive: "https://apis-prelive.quran.foundation/auth",
 };
 
 type LocalStore = Map<string, UserProgressSummary>;
@@ -63,21 +63,24 @@ function getLocalProgress(userId: string): UserProgressSummary {
   return empty;
 }
 
-function buildApiUrl(userId: string): string | null {
-  if (quranEndpoint) {
-    if (quranEndpoint.includes("{userId}")) {
-      return quranEndpoint.replace("{userId}", encodeURIComponent(userId));
-    }
-    return quranEndpoint;
-  }
-
+function buildBaseUrl(): string | null {
   const base = quranBaseUrl || defaultBaseByEnv[quranEnv] || defaultBaseByEnv.prelive;
-
   if (!base) {
     return null;
   }
 
-  return `${base.replace(/\/$/, "")}/user-progress/${encodeURIComponent(userId)}`;
+  const trimmed = base.replace(/\/$/, "");
+  return trimmed.endsWith("/auth") ? trimmed : `${trimmed}/auth`;
+}
+
+function buildStreakUrl(): string | undefined {
+  const base = buildBaseUrl();
+  return base ? `${base}/v1/streaks/current-streak-days?type=QURAN` : undefined;
+}
+
+function buildActivityDaysUrl(): string | undefined {
+  const base = buildBaseUrl();
+  return base ? `${base}/v1/activity-days` : undefined;
 }
 
 function normalizeRemoteProgress(
@@ -130,18 +133,35 @@ function normalizeRemoteProgress(
   };
 }
 
+function buildAuthHeaders(accessToken?: string, timezone?: string): Headers {
+  const headers = new Headers({ Accept: "application/json" });
+  const token = (accessToken ?? quranApiKey).trim();
+
+  if (token) {
+    headers.set("x-auth-token", token);
+  }
+
+  if (qfClientId) {
+    headers.set("x-client-id", qfClientId);
+  }
+
+  if (timezone) {
+    headers.set("x-timezone", timezone);
+  }
+
+  return headers;
+}
+
 async function tryFetchRemoteProgress(
   userId: string,
+  accessToken?: string,
 ): Promise<Pick<UserProgressSyncResponse, "progress" | "status" | "apiEndpoint" | "remoteDetails">> {
-  const apiUrl = buildApiUrl(userId);
+  const apiUrl = buildStreakUrl();
   if (!apiUrl) {
     throw new Error("No Quran User API endpoint configured");
   }
 
-  const headers = new Headers({ Accept: "application/json" });
-  if (quranApiKey) {
-    headers.set("Authorization", `Bearer ${quranApiKey}`);
-  }
+  const headers = buildAuthHeaders(accessToken);
 
   const response = await fetch(apiUrl, {
     method: "GET",
@@ -161,27 +181,35 @@ async function tryFetchRemoteProgress(
     progress: normalizeRemoteProgress(payload, userId),
     status,
     apiEndpoint: apiUrl,
-    remoteDetails: "GET remote user progress successful",
+    remoteDetails: "GET /auth/v1/streaks/current-streak-days successful",
   };
 }
 
 async function trySyncRemoteProgress(
   payload: UserProgressSyncRequest,
+  accessToken?: string,
+  timezone?: string,
 ): Promise<Pick<UserProgressSyncResponse, "progress" | "status" | "apiEndpoint" | "remoteDetails">> {
-  const apiUrl = buildApiUrl(payload.userId);
+  const apiUrl = buildActivityDaysUrl();
   if (!apiUrl) {
     throw new Error("No Quran User API endpoint configured");
   }
 
-  const headers = new Headers({ "Content-Type": "application/json", Accept: "application/json" });
-  if (quranApiKey) {
-    headers.set("Authorization", `Bearer ${quranApiKey}`);
-  }
+  const headers = buildAuthHeaders(accessToken, timezone);
+  headers.set("Content-Type", "application/json");
+
+  const activityPayload = {
+    type: "QURAN",
+    seconds: Math.max(0, Math.round(payload.totalMinutes * 60)),
+    ranges: payload.lastReadAyahKey ? [payload.lastReadAyahKey] : [],
+    mushafId: 2,
+    ...(payload.lastSessionDate ? { date: payload.lastSessionDate } : {}),
+  };
 
   const response = await fetch(apiUrl, {
     method: "POST",
     headers,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(activityPayload),
   });
 
   const status = response.status;
@@ -197,15 +225,20 @@ async function trySyncRemoteProgress(
     progress: normalizeRemoteProgress(payloadResponse, payload.userId),
     status,
     apiEndpoint: apiUrl,
-    remoteDetails: "POST remote user progress successful",
+    remoteDetails: "POST /auth/v1/activity-days successful",
   };
 }
 
 export async function syncUserProgress(
   payload: UserProgressSyncRequest,
+  options?: { accessToken?: string; timezone?: string },
 ): Promise<UserProgressSyncResponse> {
   try {
-    const remote = await trySyncRemoteProgress(payload);
+    const remote = await trySyncRemoteProgress(
+      payload,
+      options?.accessToken,
+      options?.timezone,
+    );
     return {
       ok: true,
       source: "quran-foundation",
@@ -224,7 +257,7 @@ export async function syncUserProgress(
         error instanceof Error
           ? `Fallback to local because: ${error.message}`
           : "Fallback to local user progress",
-      apiEndpoint: buildApiUrl(payload.userId) ?? undefined,
+      apiEndpoint: buildActivityDaysUrl(),
       status: undefined,
       remoteDetails: "Falling back to local progress",
     };
@@ -233,9 +266,10 @@ export async function syncUserProgress(
 
 export async function fetchUserProgress(
   userId: string,
+  options?: { accessToken?: string },
 ): Promise<UserProgressSyncResponse> {
   try {
-    const remote = await tryFetchRemoteProgress(userId);
+    const remote = await tryFetchRemoteProgress(userId, options?.accessToken);
     return {
       ok: true,
       source: "quran-foundation",
@@ -254,7 +288,7 @@ export async function fetchUserProgress(
         error instanceof Error
           ? `Fallback to local because: ${error.message}`
           : "Fallback to local user progress",
-      apiEndpoint: buildApiUrl(userId) ?? undefined,
+      apiEndpoint: buildStreakUrl(),
       status: undefined,
       remoteDetails: "Falling back to local progress",
     };
