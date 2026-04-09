@@ -7,16 +7,13 @@ import type {
 const LOCAL_SOURCE = "local-fallback" as const;
 
 const quranEnv = (process.env.QF_ENV ?? process.env.NEXT_PUBLIC_QF_ENV ?? "prelive").trim();
-const quranEndpoint = (process.env.QF_USER_PROGRESS_ENDPOINT ?? "").trim();
 const quranBaseUrl = (process.env.QF_USER_API_BASE_URL ?? "").trim();
 const quranApiKey = (process.env.QF_USER_API_KEY ?? "").trim();
-const qfOAuthEndpoint = (process.env.QF_OAUTH_ENDPOINT ?? "https://oauth2.quran.foundation").trim();
 const qfClientId = (process.env.QF_CLIENT_ID ?? process.env.QURAN_CLIENT_ID ?? "").trim();
-const qfClientSecret = (process.env.QF_CLIENT_SECRET ?? process.env.QURAN_CLIENT_SECRET ?? "").trim();
 
 const defaultBaseByEnv: Record<string, string> = {
-  production: "https://apis.quran.foundation",
-  prelive: "https://apis-prelive.quran.foundation",
+  production: "https://apis.quran.foundation/auth",
+  prelive: "https://apis-prelive.quran.foundation/auth",
 };
 
 type LocalStore = Map<string, UserProgressSummary>;
@@ -66,21 +63,24 @@ function getLocalProgress(userId: string): UserProgressSummary {
   return empty;
 }
 
-function buildApiUrl(userId: string): string | null {
-  if (quranEndpoint) {
-    if (quranEndpoint.includes("{userId}")) {
-      return quranEndpoint.replace("{userId}", encodeURIComponent(userId));
-    }
-    return quranEndpoint;
-  }
-
+function buildBaseUrl(): string | null {
   const base = quranBaseUrl || defaultBaseByEnv[quranEnv] || defaultBaseByEnv.prelive;
-
   if (!base) {
     return null;
   }
 
-  return `${base.replace(/\/$/, "")}/user-progress/${encodeURIComponent(userId)}`;
+  const trimmed = base.replace(/\/$/, "");
+  return trimmed.endsWith("/auth") ? trimmed : `${trimmed}/auth`;
+}
+
+function buildStreakUrl(): string | undefined {
+  const base = buildBaseUrl();
+  return base ? `${base}/v1/streaks/current-streak-days?type=QURAN` : undefined;
+}
+
+function buildActivityDaysUrl(): string | undefined {
+  const base = buildBaseUrl();
+  return base ? `${base}/v1/activity-days` : undefined;
 }
 
 function normalizeRemoteProgress(
@@ -133,61 +133,35 @@ function normalizeRemoteProgress(
   };
 }
 
-async function getQuranFoundationAuthToken(): Promise<string | undefined> {
-  if (quranApiKey) {
-    return quranApiKey;
+function buildAuthHeaders(accessToken?: string, timezone?: string): Headers {
+  const headers = new Headers({ Accept: "application/json" });
+  const token = (accessToken ?? quranApiKey).trim();
+
+  if (token) {
+    headers.set("x-auth-token", token);
   }
 
-  if (!qfClientId || !qfClientSecret || !qfOAuthEndpoint) {
-    return undefined;
+  if (qfClientId) {
+    headers.set("x-client-id", qfClientId);
   }
 
-  const tokenUrl = `${qfOAuthEndpoint.replace(/\/$/, "")}/oauth/token`;
-  const tokenResponse = await fetch(tokenUrl, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Accept: "application/json",
-    },
-    body: new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: qfClientId,
-      client_secret: qfClientSecret,
-    }).toString(),
-  });
-
-  if (!tokenResponse.ok) {
-    throw new Error(`Quran Foundation token exchange failed ${tokenResponse.status}`);
+  if (timezone) {
+    headers.set("x-timezone", timezone);
   }
 
-  const tokenPayload = await tokenResponse.json();
-  if (typeof tokenPayload.access_token === "string") {
-    return tokenPayload.access_token;
-  }
-
-  throw new Error("Quran Foundation token response missing access_token");
+  return headers;
 }
 
 async function tryFetchRemoteProgress(
   userId: string,
+  accessToken?: string,
 ): Promise<Pick<UserProgressSyncResponse, "progress" | "status" | "apiEndpoint" | "remoteDetails">> {
-  const apiUrl = buildApiUrl(userId);
+  const apiUrl = buildStreakUrl();
   if (!apiUrl) {
     throw new Error("No Quran User API endpoint configured");
   }
 
-  const headers = new Headers({ Accept: "application/json" });
-  try {
-    const token = await getQuranFoundationAuthToken();
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-  } catch (error) {
-    // proceed without token; the endpoint can still be hit with anonymous request.
-    if (error instanceof Error) {
-      throw new Error(`Auth token fetch failed: ${error.message}`);
-    }
-  }
+  const headers = buildAuthHeaders(accessToken);
 
   const response = await fetch(apiUrl, {
     method: "GET",
@@ -207,35 +181,35 @@ async function tryFetchRemoteProgress(
     progress: normalizeRemoteProgress(payload, userId),
     status,
     apiEndpoint: apiUrl,
-    remoteDetails: "GET remote user progress successful",
+    remoteDetails: "GET /auth/v1/streaks/current-streak-days successful",
   };
 }
 
 async function trySyncRemoteProgress(
   payload: UserProgressSyncRequest,
+  accessToken?: string,
+  timezone?: string,
 ): Promise<Pick<UserProgressSyncResponse, "progress" | "status" | "apiEndpoint" | "remoteDetails">> {
-  const apiUrl = buildApiUrl(payload.userId);
+  const apiUrl = buildActivityDaysUrl();
   if (!apiUrl) {
     throw new Error("No Quran User API endpoint configured");
   }
 
-  const headers = new Headers({ "Content-Type": "application/json", Accept: "application/json" });
-  try {
-    const token = await getQuranFoundationAuthToken();
-    if (token) {
-      headers.set("Authorization", `Bearer ${token}`);
-    }
-  } catch (error) {
-    // if auth token exchange failed, we still attempt remote call (may fallback later)
-    if (error instanceof Error) {
-      throw new Error(`Auth token fetch failed: ${error.message}`);
-    }
-  }
+  const headers = buildAuthHeaders(accessToken, timezone);
+  headers.set("Content-Type", "application/json");
+
+  const activityPayload = {
+    type: "QURAN",
+    seconds: Math.max(0, Math.round(payload.totalMinutes * 60)),
+    ranges: payload.lastReadAyahKey ? [payload.lastReadAyahKey] : [],
+    mushafId: 2,
+    ...(payload.lastSessionDate ? { date: payload.lastSessionDate } : {}),
+  };
 
   const response = await fetch(apiUrl, {
     method: "POST",
     headers,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(activityPayload),
   });
 
   const status = response.status;
@@ -251,15 +225,20 @@ async function trySyncRemoteProgress(
     progress: normalizeRemoteProgress(payloadResponse, payload.userId),
     status,
     apiEndpoint: apiUrl,
-    remoteDetails: "POST remote user progress successful",
+    remoteDetails: "POST /auth/v1/activity-days successful",
   };
 }
 
 export async function syncUserProgress(
   payload: UserProgressSyncRequest,
+  options?: { accessToken?: string; timezone?: string },
 ): Promise<UserProgressSyncResponse> {
   try {
-    const remote = await trySyncRemoteProgress(payload);
+    const remote = await trySyncRemoteProgress(
+      payload,
+      options?.accessToken,
+      options?.timezone,
+    );
     return {
       ok: true,
       source: "quran-foundation",
@@ -278,7 +257,7 @@ export async function syncUserProgress(
         error instanceof Error
           ? `Fallback to local because: ${error.message}`
           : "Fallback to local user progress",
-      apiEndpoint: buildApiUrl(payload.userId) ?? undefined,
+      apiEndpoint: buildActivityDaysUrl(),
       status: undefined,
       remoteDetails: "Falling back to local progress",
     };
@@ -287,9 +266,10 @@ export async function syncUserProgress(
 
 export async function fetchUserProgress(
   userId: string,
+  options?: { accessToken?: string },
 ): Promise<UserProgressSyncResponse> {
   try {
-    const remote = await tryFetchRemoteProgress(userId);
+    const remote = await tryFetchRemoteProgress(userId, options?.accessToken);
     return {
       ok: true,
       source: "quran-foundation",
@@ -308,7 +288,7 @@ export async function fetchUserProgress(
         error instanceof Error
           ? `Fallback to local because: ${error.message}`
           : "Fallback to local user progress",
-      apiEndpoint: buildApiUrl(userId) ?? undefined,
+      apiEndpoint: buildStreakUrl(),
       status: undefined,
       remoteDetails: "Falling back to local progress",
     };

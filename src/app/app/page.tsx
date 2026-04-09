@@ -207,6 +207,13 @@ export default function Home() {
   const [tourDismissed, setTourDismissed] = useState(false);
   const [runtimeNotice, setRuntimeNotice] = useState("");
   const [sessionFeedbackMessage, setSessionFeedbackMessage] = useState("");
+  const [qfSession, setQfSession] = useState<{
+    connected: boolean;
+    expiresAt: number | null;
+  }>({
+    connected: false,
+    expiresAt: null,
+  });
 
   const updateSyncState = useCallback(
     (next: {
@@ -388,6 +395,34 @@ export default function Home() {
     return generated;
   }, []);
 
+  const refreshQfSessionStatus = useCallback(async (): Promise<void> => {
+    try {
+      const response = await fetch("/api/qf-auth/session", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`QF session check failed (${response.status})`);
+      }
+      const payload = (await response.json()) as { connected: boolean; expiresAt: number | null };
+      setQfSession({
+        connected: Boolean(payload.connected),
+        expiresAt: payload.expiresAt ?? null,
+      });
+    } catch {
+      setQfSession({ connected: false, expiresAt: null });
+    }
+  }, []);
+
+  const connectQfAccount = useCallback(() => {
+    window.location.assign("/api/qf-auth/start?next=/app");
+  }, []);
+
+  const disconnectQfAccount = useCallback(async () => {
+    const response = await fetch("/api/qf-auth/logout", { method: "POST" });
+    if (!response.ok) {
+      throw new Error("Unable to disconnect Quran account");
+    }
+    await refreshQfSessionStatus();
+  }, [refreshQfSessionStatus]);
+
   const refreshUserProgressStatus = useCallback(async (userId: string): Promise<void> => {
     try {
       const response = await fetch(`/api/user-progress?userId=${encodeURIComponent(userId)}`);
@@ -449,7 +484,10 @@ export default function Home() {
     try {
       const response = await fetch("/api/user-progress", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+        },
         body: JSON.stringify(payload),
       });
 
@@ -482,6 +520,32 @@ export default function Home() {
       }));
     }
   }, []);
+
+  useEffect(() => {
+    void refreshQfSessionStatus();
+
+    const params = new URLSearchParams(window.location.search);
+    const qf = params.get("qf");
+    const qfMessage = params.get("message");
+
+    if (qf === "connected") {
+      setRuntimeNotice("Quran account connected. User APIs are now available.");
+      params.delete("qf");
+      params.delete("message");
+      const nextQuery = params.toString();
+      const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+      window.history.replaceState({}, "", nextUrl);
+    } else if (qf === "error") {
+      setRuntimeNotice(
+        `Quran account connection failed${qfMessage ? `: ${qfMessage}` : ""}`,
+      );
+      params.delete("qf");
+      params.delete("message");
+      const nextQuery = params.toString();
+      const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+      window.history.replaceState({}, "", nextUrl);
+    }
+  }, [refreshQfSessionStatus]);
 
   useEffect(() => {
     async function bootstrap() {
@@ -568,8 +632,10 @@ export default function Home() {
   async function handleLogout() {
     try {
       await signOutCurrentUser();
+      await fetch("/api/qf-auth/logout", { method: "POST" });
     } finally {
       setAuthUser(null);
+      setQfSession({ connected: false, expiresAt: null });
       updateSyncState({
         source: "local",
         message: "Logged out. Progress tracked locally.",
@@ -707,17 +773,44 @@ export default function Home() {
 
           <div className="mt-6 grid gap-3 rounded-2xl border border-emerald-900/10 bg-white/80 p-4">
             {authUser ? (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-slate-700">
-                  Signed in as <span className="font-semibold">{authUser.name}</span> (
-                  {authUser.email})
-                </p>
-                <button
-                  onClick={() => void handleLogout()}
-                  className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Log Out
-                </button>
+              <div className="grid w-full gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-slate-700">
+                    Signed in as <span className="font-semibold">{authUser.name}</span> (
+                    {authUser.email})
+                  </p>
+                  <button
+                    onClick={() => void handleLogout()}
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    Log Out
+                  </button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs text-slate-600">
+                    Quran account: {qfSession.connected ? "Connected" : "Not connected"}
+                    {qfSession.connected && qfSession.expiresAt
+                      ? ` (expires ${new Date(qfSession.expiresAt).toLocaleString()})`
+                      : ""}
+                  </p>
+                  {qfSession.connected ? (
+                    <button
+                      type="button"
+                      onClick={() => void disconnectQfAccount()}
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Disconnect Quran Account
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={connectQfAccount}
+                      className="rounded-xl bg-emerald-900 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-emerald-800"
+                    >
+                      Connect Quran Account
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="flex flex-wrap items-center gap-2">

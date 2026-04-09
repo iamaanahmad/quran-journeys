@@ -96,12 +96,28 @@ npm run dev
 - `NEXT_PUBLIC_SUPABASE_URL` (required for auth): Supabase project URL
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (required for auth): Supabase publishable key
 - `QF_ENV` (optional): `prelive` (default) or `production`
-- `QF_CLIENT_ID` or `QURAN_CLIENT_ID` (required for OAuth mode): client ID from Quran Foundation registration
-- `QF_CLIENT_SECRET` or `QURAN_CLIENT_SECRET` (required for OAuth mode): client secret (server-side only)
-- `QF_USER_PROGRESS_ENDPOINT` (optional): exact User API progress endpoint, e.g. `https://.../user-progress/{userId}`
-- `QF_USER_API_BASE_URL` (optional alternative to endpoint): base URL for User API
-- `QF_USER_API_KEY` (optional): static bearer token if your environment uses one; if missing, app will use `QF_CLIENT_ID` + `QF_CLIENT_SECRET` to fetch access token from `QF_OAUTH_ENDPOINT`
-- `QF_OAUTH_ENDPOINT` (optional): OAuth2 token endpoint host (default `https://oauth2.quran.foundation`)
+- `QF_CLIENT_ID` or `QURAN_CLIENT_ID` (required for user APIs): client ID sent as `x-client-id`
+- `QF_CLIENT_SECRET` or `QURAN_CLIENT_SECRET` (required for confidential clients): used server-side in code exchange
+- `QF_USER_API_BASE_URL` (optional): user API base, defaults to `https://apis.quran.foundation/auth` in production and `https://apis-prelive.quran.foundation/auth` in prelive
+- `QF_USER_API_KEY` (optional): user access token sent as `x-auth-token` (for local testing only)
+- `QF_OAUTH_BASE_URL` (optional): OAuth base for authorization/code exchange, defaults to env-specific Quran Foundation hosts
+- `QF_OAUTH_REDIRECT_URI` (optional): callback URL registered with QF, defaults to `${NEXT_PUBLIC_APP_URL}/api/qf-auth/callback`
+- `QF_OAUTH_SCOPE` (optional): defaults to `openid profile offline_access`
+
+Authorization Code + PKCE backend routes:
+- `GET /api/qf-auth/start` initiates `/oauth2/auth`
+- `GET /api/qf-auth/callback` exchanges code at `/oauth2/token`
+- `GET /api/qf-auth/session` checks connected token state
+- `POST /api/qf-auth/logout` clears QF token cookies
+
+User API calls are made against documented auth endpoints:
+- `GET /auth/v1/streaks/current-streak-days?type=QURAN`
+- `POST /auth/v1/activity-days`
+
+Headers used for user APIs:
+- `x-auth-token: <user access token>`
+- `x-client-id: <client id>`
+- `x-timezone: <IANA timezone>` (on activity writes)
 
 
 Without API keys/endpoints, the app still works in fallback mode.
