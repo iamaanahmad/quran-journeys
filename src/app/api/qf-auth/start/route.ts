@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const nextPath = url.searchParams.get("next") || "/app";
 
-  const config = getQfOidcConfig();
+  const config = getQfOidcConfig(url.origin);
   const verifier = generatePkceVerifier();
   const challenge = generatePkceChallenge(verifier);
   const state = generateStateToken();
