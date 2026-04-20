@@ -667,6 +667,25 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
         ? "text-lg md:text-xl"
         : "text-base";
 
+  const arabicFontClass =
+    fontSize === "xlarge"
+      ? "text-4xl md:text-5xl leading-loose"
+      : fontSize === "large"
+        ? "text-3xl md:text-4xl leading-loose"
+        : "text-2xl md:text-3xl leading-relaxed";
+
+  const translationFontClass =
+    fontSize === "xlarge"
+      ? "text-lg md:text-xl leading-9"
+      : fontSize === "large"
+        ? "text-base md:text-lg leading-8"
+        : "text-sm leading-7";
+
+  const cardBgClass = highContrast ? "bg-zinc-900 border-zinc-700 text-white" : "bg-white border-slate-200";
+  const explainBgClass = highContrast ? "bg-zinc-800 border-zinc-600 text-white" : "bg-amber-50/70 border-amber-200 text-slate-900";
+  const mutedTextClass = highContrast ? "text-zinc-400" : "text-slate-500";
+  const regularTextClass = highContrast ? "text-zinc-300" : "text-slate-700";
+
   return (
     <div className={`relative min-h-screen overflow-x-hidden transition-colors ${highContrast ? "bg-black text-white" : "bg-[radial-gradient(circle_at_top,_#f7f1d8_0%,_#f8f4e8_35%,_#e8efe6_100%)] text-slate-900"}`}>
       {!highContrast && <div className="pointer-events-none absolute inset-0 opacity-25 [background:linear-gradient(120deg,transparent_0%,rgba(13,95,78,0.08)_25%,transparent_55%),linear-gradient(0deg,rgba(189,147,69,0.06),rgba(189,147,69,0.06))]" />}
@@ -1042,20 +1061,20 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
                     {currentDay.verses.map((verse) => (
                       <article
                         key={verse.key}
-                        className="rounded-2xl border border-slate-200 bg-white p-4"
+                        className={`rounded-2xl border p-4 ${cardBgClass}`}
                       >
                         <div className="flex items-center justify-between">
-                          <p className="text-xs font-semibold tracking-[0.12em] text-slate-500">
+                          <p className={`text-[10px] md:text-xs font-semibold tracking-[0.12em] ${mutedTextClass}`}>
                             {verse.key}
                           </p>
-                          <audio controls controlsList="nodownload" preload="none" className="h-8 w-64 md:w-80">
+                          <audio controls controlsList="nodownload" preload="none" className="h-8 w-56 md:w-80">
                             <source src={verse.audioUrl} type="audio/mpeg" />
                           </audio>
                         </div>
-                        <p className="arabic mt-3 text-right text-2xl leading-relaxed md:text-3xl">
+                        <p className={`arabic mt-4 md:mt-6 text-right ${arabicFontClass} ${highContrast ? "text-emerald-100/90" : "text-emerald-950"} tracking-wide`}>
                           {verse.arabic}
                         </p>
-                        <p className="mt-3 text-sm leading-7 text-slate-700">
+                        <p className={`mt-4 md:mt-5 ${translationFontClass} ${regularTextClass} tracking-wide`}>
                           {verse.translation}
                         </p>
                       </article>
@@ -1074,30 +1093,33 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
                 )}
 
                 {step === "understand" && (
-                  <div className="grid gap-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4">
+                  <div className={`grid gap-4 rounded-2xl border p-4 md:p-6 ${explainBgClass}`}>
                     {explanation ? (
                       <>
-                        <h3 className="text-lg font-semibold">Key points</h3>
-                        <ul className="grid gap-2 text-sm leading-7 text-slate-700">
+                        <h3 className="text-lg md:text-xl font-bold tracking-tight">Key points</h3>
+                        <ul className={`grid gap-3 ${translationFontClass} ${regularTextClass} tracking-wide`}>
                           {explanation.keyPoints.map((item) => (
-                            <li key={item}>- {item}</li>
+                            <li key={item} className="flex gap-2">
+                              <span className="text-amber-500 font-bold">•</span>
+                              <span>{item}</span>
+                            </li>
                           ))}
                         </ul>
-                        <h4 className="text-base font-semibold">In simple terms</h4>
-                        <p className="text-sm leading-7 text-slate-700">
+                        <h4 className="mt-4 text-base md:text-lg font-bold tracking-tight">In simple terms</h4>
+                        <p className={`mt-1 ${translationFontClass} ${regularTextClass} tracking-wide`}>
                           {explanation.simpleSummary}
                         </p>
-                        <p className="rounded-xl bg-amber-100 px-3 py-2 text-xs text-amber-900">
+                        <p className={`mt-4 rounded-xl px-4 py-3 text-xs md:text-sm font-medium ${highContrast ? "bg-amber-950/40 text-amber-200 border border-amber-900/50" : "bg-amber-100 text-amber-900"}`}>
                           {explanation.disclaimer}
                         </p>
-                        <div className="flex flex-wrap gap-2 text-xs">
+                        <div className="mt-2 flex flex-wrap gap-2 text-xs">
                           {currentDay?.verses.slice(0, 3).map((verse) => (
                             <a
                               key={verse.key}
                               href={`https://quran.com/${verse.key.replace(":", "/")}?translations=85`}
                               target="_blank"
                               rel="noreferrer"
-                              className="rounded-full border border-amber-300 bg-white px-3 py-1 font-semibold text-amber-900"
+                              className={`rounded-full border px-4 py-2 font-semibold transition ${highContrast ? "border-amber-700 bg-black text-amber-500 hover:bg-zinc-900" : "border-amber-300 bg-white text-amber-900 hover:bg-amber-50"}`}
                             >
                               See source {verse.key}
                             </a>
@@ -1119,33 +1141,36 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
                 )}
 
                 {step === "reflect" && (
-                  <div className="grid gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
-                    <h3 className="text-lg font-semibold">Reflection & Feedback</h3>
+                  <div className={`grid gap-4 rounded-2xl border p-4 md:p-6 ${highContrast ? "bg-emerald-950/40 border-emerald-900/60" : "bg-emerald-50/60 border-emerald-200"} `}>
+                    <h3 className="text-lg md:text-xl font-bold tracking-tight">Reflection & Feedback</h3>
 
                     {explanation?.reflectionPrompts?.length ? (
-                      <ul className="grid gap-2 text-sm leading-7 text-slate-700">
+                      <ul className={`grid gap-3 ${translationFontClass} ${regularTextClass} tracking-wide`}>
                         {explanation.reflectionPrompts.map((prompt) => (
-                          <li key={prompt}>- {prompt}</li>
+                          <li key={prompt} className="flex gap-2">
+                            <span className="text-emerald-500 font-bold">•</span>
+                            <span>{prompt}</span>
+                          </li>
                         ))}
                       </ul>
                     ) : null}
 
-                    <label className="grid gap-1 text-sm">
+                    <label className={`grid gap-2 ${translationFontClass} ${regularTextClass} font-medium mt-4`}>
                       Short reflection note
                       <textarea
                         rows={4}
-                        className="rounded-xl border border-slate-300 bg-white px-3 py-2"
+                        className={`rounded-xl border px-4 py-3 placeholder:opacity-50 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${highContrast ? "bg-black border-zinc-700 text-white" : "bg-white border-slate-300 text-slate-800"}`}
                         value={reflectionText}
                         onChange={(event) => setReflectionText(event.target.value)}
                         placeholder="What stood out? What will you apply today?"
                       />
                     </label>
 
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <label className="grid gap-1 text-sm">
+                    <div className="grid gap-3 md:grid-cols-3 mt-2">
+                      <label className={`grid gap-2 ${translationFontClass} ${regularTextClass} font-medium`}>
                         Mood tag
                         <select
-                          className="rounded-xl border border-slate-300 bg-white px-3 py-2"
+                          className={`rounded-xl border px-4 py-3 appearance-none transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${highContrast ? "bg-black border-zinc-700 text-white" : "bg-white border-slate-300 text-slate-800"}`}
                           value={moodTag}
                           onChange={(event) =>
                             setMoodTag(event.target.value as MoodTag)
@@ -1159,10 +1184,10 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
                         </select>
                       </label>
 
-                      <label className="grid gap-1 text-sm">
+                      <label className={`grid gap-2 ${translationFontClass} ${regularTextClass} font-medium`}>
                         Session length felt
                         <select
-                          className="rounded-xl border border-slate-300 bg-white px-3 py-2"
+                          className={`rounded-xl border px-4 py-3 appearance-none transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${highContrast ? "bg-black border-zinc-700 text-white" : "bg-white border-slate-300 text-slate-800"}`}
                           value={lengthRating}
                           onChange={(event) =>
                             setLengthRating(event.target.value as LengthRating)
@@ -1174,13 +1199,13 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
                         </select>
                       </label>
 
-                      <label className="grid gap-1 text-sm">
+                      <label className={`grid gap-2 ${translationFontClass} ${regularTextClass} font-medium`}>
                         Clarity rating (1-5)
                         <input
                           type="number"
                           min={1}
                           max={5}
-                          className="rounded-xl border border-slate-300 bg-white px-3 py-2"
+                          className={`rounded-xl border px-4 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 ${highContrast ? "bg-black border-zinc-700 text-white" : "bg-white border-slate-300 text-slate-800"}`}
                           value={clarityRating}
                           onChange={(event) =>
                             setClarityRating(Number(event.target.value))
