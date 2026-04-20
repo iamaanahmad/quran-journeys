@@ -178,6 +178,8 @@ export default function Home() {
   const [state, setState] = useState<JourneyState | null>(null);
   const [step, setStep] = useState<SessionStep>("read");
   const [appView, setAppView] = useState<AppView>("dashboard");
+  const [highContrast, setHighContrast] = useState(false);
+  const [fontSize, setFontSize] = useState<"base" | "large" | "xlarge">("base");
   const [loadingExplain, setLoadingExplain] = useState(false);
   const [explanation, setExplanation] = useState<ExplanationResult | null>(null);
   const [reflectionText, setReflectionText] = useState("");
@@ -234,6 +236,19 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
   }, []);
 
   useEffect(() => {
+    const handlePlay = (e: Event) => {
+      const audios = document.getElementsByTagName('audio');
+      for (let i = 0; i < audios.length; i++) {
+        if (audios[i] !== e.target) {
+          audios[i].pause();
+        }
+      }
+    };
+    document.addEventListener('play', handlePlay, true);
+    return () => document.removeEventListener('play', handlePlay, true);
+  }, []);
+
+  useEffect(() => {
     const dismissed = window.localStorage.getItem(TOUR_DISMISSED_KEY);
     setTourDismissed(dismissed === "1");
   }, []);
@@ -254,6 +269,11 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state, authUser]);
+
+  const hasCompletedToday = useMemo(() => {
+    const todayStr = toDateOnly(new Date());
+    return state?.logs.some(log => log.date === todayStr && log.completed) ?? false;
+  }, [state]);
 
   const currentDay = useMemo(() => {
     if (!state?.plan.length) {
@@ -621,6 +641,8 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
     setClarityRating(4);
     setExplanation(null);
     setStep("read");
+    setAppView("dashboard");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function resetJourney() {
@@ -638,22 +660,67 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
     setStep("read");
   }
 
-  return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_#f7f1d8_0%,_#f8f4e8_35%,_#e8efe6_100%)] text-slate-900">
-      <div className="pointer-events-none absolute inset-0 opacity-25 [background:linear-gradient(120deg,transparent_0%,rgba(13,95,78,0.08)_25%,transparent_55%),linear-gradient(0deg,rgba(189,147,69,0.06),rgba(189,147,69,0.06))]" />
+  const baseFontClasses =
+    fontSize === "xlarge"
+      ? "text-xl md:text-2xl"
+      : fontSize === "large"
+        ? "text-lg md:text-xl"
+        : "text-base";
 
-      <main className="relative mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8">
-        <header className="rounded-3xl border border-emerald-900/15 bg-white/75 p-6 backdrop-blur-md md:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-emerald-900/80">
-            App Workspace
-          </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">
-            Quran Journeys Dashboard
-          </h1>
-          <p className="mt-3 max-w-3xl text-sm text-slate-700 md:text-base">
-            Track your live journey with panel-based navigation for Dashboard,
-            Today&apos;s Session, Plan, and Insights.
-          </p>
+  return (
+    <div className={`relative min-h-screen overflow-x-hidden transition-colors ${highContrast ? "bg-black text-white" : "bg-[radial-gradient(circle_at_top,_#f7f1d8_0%,_#f8f4e8_35%,_#e8efe6_100%)] text-slate-900"}`}>
+      {!highContrast && <div className="pointer-events-none absolute inset-0 opacity-25 [background:linear-gradient(120deg,transparent_0%,rgba(13,95,78,0.08)_25%,transparent_55%),linear-gradient(0deg,rgba(189,147,69,0.06),rgba(189,147,69,0.06))]" />}
+
+      <main className={`relative mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8 ${baseFontClasses}`}>
+        <header className={`rounded-3xl border p-6 backdrop-blur-md md:p-8 ${highContrast ? "bg-black border-white/20" : "bg-white/75 border-emerald-900/15"}`}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className={`text-xs font-semibold uppercase tracking-[0.25em] ${highContrast ? "text-gray-400" : "text-emerald-900/80"}`}>
+                App Workspace
+              </p>
+              <h1 className="mt-2 text-3xl font-bold tracking-tight md:text-4xl">
+                Quran Journeys Dashboard
+              </h1>
+              <p className={`mt-3 max-w-3xl text-sm md:text-base ${highContrast ? "text-gray-300" : "text-slate-700"}`}>
+                Track your live journey with panel-based navigation for Dashboard,
+                Today&apos;s Session, Plan, and Insights.
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2 rounded-xl bg-slate-900/5 dark:bg-white/10 p-1">
+              <button
+                title="Toggle High Contrast"
+                onClick={() => setHighContrast(prev => !prev)}
+                className={`p-2 rounded-lg transition ${highContrast ? "bg-white text-black" : "hover:bg-slate-200 text-slate-700"}`}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+              </button>
+              <div className="w-[1px] h-6 bg-slate-300 dark:bg-slate-700 mx-1"></div>
+              <button
+                title="Normal Font Size"
+                onClick={() => setFontSize("base")}
+                className={`p-2 rounded-lg font-bold text-sm transition ${fontSize === "base" ? "bg-emerald-900 text-white" : highContrast ? "hover:bg-white/20 text-white" : "hover:bg-slate-200 text-slate-700"}`}
+              >
+                A
+              </button>
+              <button
+                title="Large Font Size"
+                onClick={() => setFontSize("large")}
+                className={`p-2 rounded-lg font-bold text-base transition ${fontSize === "large" ? "bg-emerald-900 text-white" : highContrast ? "hover:bg-white/20 text-white" : "hover:bg-slate-200 text-slate-700"}`}
+              >
+                A+
+              </button>
+              <button
+                title="Extra Large Font Size"
+                onClick={() => setFontSize("xlarge")}
+                className={`p-2 rounded-lg font-bold text-lg transition ${fontSize === "xlarge" ? "bg-emerald-900 text-white" : highContrast ? "hover:bg-white/20 text-white" : "hover:bg-slate-200 text-slate-700"}`}
+              >
+                A++
+              </button>
+            </div>
+          </div>
 
           {runtimeNotice ? (
             <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
@@ -785,6 +852,62 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
 
             
 
+            <section className={`${appView === "dashboard" ? "block" : "hidden"} rounded-3xl border border-emerald-900/15 bg-white/85 p-6 shadow-sm md:p-8`}>
+              <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+                <div className="flex flex-col gap-2">
+                  <h2 className="text-2xl font-bold tracking-tight">Your Progress</h2>
+                  <p className="text-sm text-slate-600">
+                    Goal: <span className="font-semibold capitalize">{state.goal.goalType}</span> ({state.goal.timePerDayMinutes} min/day)
+                  </p>
+                </div>
+                <div className="flex flex-wrap justify-start md:justify-end gap-3">
+                  <div className="flex flex-col items-center justify-center rounded-2xl bg-emerald-50 px-5 py-3 md:px-6">
+                    <span className="text-2xl md:text-3xl font-bold text-emerald-900">{streak}</span>
+                    <span className="text-[10px] md:text-xs font-semibold uppercase tracking-widest text-emerald-700">Day Streak</span>
+                  </div>
+                  <div className="flex flex-col items-center justify-center rounded-2xl bg-emerald-50 px-5 py-3 md:px-6">
+                    <span className="text-2xl md:text-3xl font-bold text-emerald-900">{progress}%</span>
+                    <span className="text-[10px] md:text-xs font-semibold uppercase tracking-widest text-emerald-700">Completed</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                {completedDays >= state.plan.length ? (
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold text-emerald-900">Alhamdulillah!</h3>
+                    <p className="mt-2 text-sm text-slate-600">You have completed your entire 7-day journey plan.</p>
+                    <button onClick={resetJourney} className="mt-5 rounded-xl bg-emerald-900 px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-800 transition">
+                      Start a New Journey
+                    </button>
+                  </div>
+                ) : hasCompletedToday ? (
+                  <div className="flex flex-col items-center text-center">
+                    <div className="bg-emerald-100 text-emerald-800 p-4 rounded-full mb-3">
+                      <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-bold text-emerald-900">Session Completed</h3>
+                    <p className="mt-2 text-slate-600 max-w-md">Great job maintaining your habit today! Your next session awaits tomorrow for Day {currentDay?.dayIndex ?? completedDays + 1}.</p>
+                    <div className="mt-5 flex gap-3">
+                      <button onClick={() => setAppView("plan")} className="rounded-xl bg-emerald-900 px-6 py-3 text-sm font-semibold text-white shadow hover:bg-emerald-800 transition">
+                        View Plan
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center text-center">
+                    <h3 className="text-2xl font-bold text-emerald-900">Ready for Day {currentDay?.dayIndex ?? completedDays + 1}?</h3>
+                    <p className="mt-2 text-sm text-slate-600 max-w-sm">Take {state.goal.timePerDayMinutes} minutes out of your busy day to reconnect and reflect.</p>
+                    <button onClick={() => setAppView("session")} className="mt-6 rounded-xl bg-emerald-900 px-8 py-4 text-base font-bold text-white shadow-md hover:bg-emerald-800 hover:-translate-y-0.5 hover:shadow-lg transition">
+                      Start Today&apos;s Session
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+
             <section className={`${appView === "insights" ? "grid" : "hidden"} gap-4 rounded-2xl border border-emerald-900/15 bg-white/85 p-4 md:grid-cols-[1.2fr_1fr]`}>
               <article className="rounded-xl border border-slate-200 bg-white p-4">
                 <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-600">
@@ -867,6 +990,23 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
                   ))}
                 </div>
               </section>
+            ) : hasCompletedToday && appView === "session" ? (
+              <section className="rounded-3xl border border-emerald-900/15 bg-white/85 p-8 text-center shadow-sm">
+                <div className="mx-auto flex w-16 h-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-800 mb-4">
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 className="text-2xl font-bold text-emerald-900">Done for Today</h2>
+                <p className="mt-2 text-slate-600">
+                  You&apos;ve completed today&apos;s session! Return tomorrow for your next verses. 
+                  Building a habit requires patience, not just speed.
+                </p>
+                <div className="mt-6 flex justify-center gap-4">
+                  <button onClick={() => setAppView("dashboard")} className="rounded-xl bg-emerald-900 px-6 py-3 font-semibold text-white shadow hover:bg-emerald-800 transition">Go to Dashboard</button>
+                  <button onClick={() => setAppView("plan")} className="rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 shadow hover:bg-slate-50 transition">View Plan</button>
+                </div>
+              </section>
             ) : currentDay && appView === "session" ? (
               <section className="grid gap-6 rounded-3xl border border-emerald-900/15 bg-white/85 p-6 shadow-sm md:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -908,7 +1048,7 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
                           <p className="text-xs font-semibold tracking-[0.12em] text-slate-500">
                             {verse.key}
                           </p>
-                          <audio controls preload="none" className="h-8 w-40">
+                          <audio controls controlsList="nodownload" preload="none" className="h-8 w-64 md:w-80">
                             <source src={verse.audioUrl} type="audio/mpeg" />
                           </audio>
                         </div>
