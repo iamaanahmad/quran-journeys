@@ -2,18 +2,6 @@
 
 AI-assisted Quran coach designed for busy professionals who need a consistent, deep Quran routine in 10-20 minutes/day.
 
-## Judges: Start Here
-
-1. Open `/` and choose one of:
-- Guest mode for instant demo
-- Auth mode (`/auth`) for synced persistence
-2. Generate a 7-day plan from onboarding.
-3. Complete one full Read -> Understand -> Reflect session.
-4. Check **Live API Evidence** panel to verify:
-- Quran Content source (`quran-foundation` or fallback)
-- Quran User API source (`quran-foundation` or fallback)
-5. Open **Weekly Insight** and click **Copy Weekly Summary**.
-
 This project is designed around Quran Foundation's mission to transform every human through Quranic guidance, with a practical 10-20 minute daily routine for busy Muslims.
 
 ## What is implemented
@@ -32,7 +20,6 @@ This project is designed around Quran Foundation's mission to transform every hu
 - Local persistence for demo reliability using browser storage
 - User identity + progress sync via `/api/user-progress` with Quran Foundation adapter and local fallback
 - Supabase Auth (email/password) with backend persistence of journey state in Postgres
-- Live API evidence panel showing Quran Content API and User API source/status
 
 ## API usage
 
@@ -122,23 +109,6 @@ Headers used for user APIs:
 
 Without API keys/endpoints, the app still works in fallback mode.
 
-## Hackathon readiness notes
-
-- Product framing and feature set align with impact, UX, and innovation criteria.
-- Content API integration is implemented with real Quran Foundation endpoints.
-- User progress sync is implemented through a provider adapter. With valid credentials it syncs to Quran Foundation User API; otherwise it stores in local fallback for reliable demos.
-- Supabase is now the default real backend for sign-in and user journey persistence; local storage is used only when not authenticated.
-- Use `docs/submission-checklist.md` to finalize delivery assets before submission.
-
-## Criteria mapping
-
-- Impact on Quran engagement: Daily 10-20 minute guided habit loop with streak + insight tracking.
-- Product quality and UX: Separate auth flow, step-based sessions, adaptive planner, judge tour hints.
-- Technical execution: Next.js + TypeScript, lint/build validated, resilient fallback strategy.
-- Innovation: Theme journeys, adaptive pacing, spaced repetition, weekly insights, circles.
-- Effective API usage: Quran Foundation content endpoints and user progress adapter with runtime evidence panel.
-
-## Roadmap
 
 - Curated ontology-based thematic journeys with deeper tafsir linking
 - Weekly email insights delivery
