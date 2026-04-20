@@ -1,6 +1,6 @@
 "use client";
 
-import { getCurrentAuthUser, saveJourneyStateToPrefs } from "@/lib/supabase-journey";
+import { getCurrentAuthUser, saveJourneyStateToPrefs, loadJourneyStateFromPrefs } from "@/lib/supabase-journey";
 import { signOutCurrentUser } from "@/lib/supabase-journey";
 import type { GoalSetup, JourneyState } from "@/lib/types";
 import Link from "next/link";
@@ -53,13 +53,29 @@ export default function LandingPage() {
 
   useEffect(() => {
     async function bootstrap() {
+      let hasJourney = false;
+      const localData = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+      if (localData) {
+        hasJourney = true;
+      }
+
       const user = await getCurrentAuthUser();
+
+      if (!hasJourney && user) {
+        const remoteState = await loadJourneyStateFromPrefs();
+        if (remoteState) hasJourney = true;
+      }
+
       setAuthEmail(user?.email ?? null);
       setAuthChecked(true);
+
+      if (hasJourney) {
+        router.push("/app");
+      }
     }
 
     void bootstrap();
-  }, []);
+  }, [router]);
 
   async function handleLogout() {
     try {
@@ -71,6 +87,11 @@ export default function LandingPage() {
   }
 
   async function startJourney() {
+    if (typeof window !== "undefined" && window.localStorage.getItem(STORAGE_KEY)) {
+      setRuntimeNotice("You already have an active journey. Please reset it from the dashboard first.");
+      return;
+    }
+
     setLoadingPlan(true);
     setRuntimeNotice("");
 
@@ -281,7 +302,7 @@ export default function LandingPage() {
               <label htmlFor="language" className="font-semibold text-slate-700">
                 Language
               </label>
-              <input
+              <select
                 id="language"
                 className="rounded-xl border border-slate-300 bg-white px-3 py-2"
                 value={goalForm.language}
@@ -291,7 +312,12 @@ export default function LandingPage() {
                     language: event.target.value,
                   }))
                 }
-              />
+              >
+                <option value="English">English</option>
+                <option value="Urdu">Urdu</option>
+                <option value="Spanish">Spanish</option>
+                <option value="French">French</option>
+              </select>
             </div>
           </div>
 

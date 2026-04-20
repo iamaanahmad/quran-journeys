@@ -68,6 +68,13 @@ function calculateStreak(logs: SessionLog[]): number {
   let streak = 0;
   const cursor = new Date();
 
+  const todayKey = toDateOnly(cursor);
+  if (completedSet.has(todayKey)) {
+    streak += 1;
+  }
+  
+  cursor.setDate(cursor.getDate() - 1);
+
   for (;;) {
     const key = toDateOnly(cursor);
     if (!completedSet.has(key)) {
@@ -738,6 +745,10 @@ export default function Home() {
   }
 
   function resetJourney() {
+    const isConfirmed = window.confirm("Are you sure you want to reset your journey? All progress and settings will be removed.");
+    if (!isConfirmed) {
+      return;
+    }
     window.localStorage.removeItem(STORAGE_KEY);
     if (authUser) {
       void clearJourneyStateFromPrefs();
@@ -863,6 +874,12 @@ export default function Home() {
           </section>
         ) : (
           <>
+            {sessionFeedbackMessage ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 shadow-sm flex justify-between items-center">
+                <span>{sessionFeedbackMessage}</span>
+                <button onClick={() => setSessionFeedbackMessage("")} className="text-emerald-700 hover:text-emerald-900 text-xs uppercase tracking-widest font-bold">Dismiss</button>
+              </div>
+            ) : null}
             <section className="rounded-2xl border border-emerald-900/15 bg-white/85 p-3">
               <div className="flex flex-wrap gap-2">
                 {([
@@ -946,37 +963,6 @@ export default function Home() {
               </div>
             </section>
 
-            {!tourDismissed && appView === "dashboard" ? (
-              <section className="rounded-2xl border border-sky-200 bg-sky-50 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-sky-900">
-                    Judge Tour (90 sec)
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={dismissTour}
-                    className="rounded-lg border border-sky-300 bg-white px-2 py-1 text-xs font-semibold text-sky-900"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-                <div className="mt-3 grid gap-2 text-xs text-sky-900 md:grid-cols-4">
-                  <p className="rounded-lg border border-sky-200 bg-white px-3 py-2">
-                    1. Generate a plan from onboarding.
-                  </p>
-                  <p className="rounded-lg border border-sky-200 bg-white px-3 py-2">
-                    2. Complete Read - Understand - Reflect flow.
-                  </p>
-                  <p className="rounded-lg border border-sky-200 bg-white px-3 py-2">
-                    3. Check Live API Evidence panel for source proof.
-                  </p>
-                  <p className="rounded-lg border border-sky-200 bg-white px-3 py-2">
-                    4. Open Weekly Insight and copy summary.
-                  </p>
-                </div>
-              </section>
-            ) : null}
-
             <section className={`${appView === "insights" ? "grid" : "hidden"} gap-4 rounded-2xl border border-emerald-900/15 bg-white/85 p-4 md:grid-cols-[1.2fr_1fr]`}>
               <article className="rounded-xl border border-slate-200 bg-white p-4">
                 <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-600">
@@ -1007,45 +993,23 @@ export default function Home() {
 
               <article className="rounded-xl border border-slate-200 bg-white p-4">
                 <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-600">
-                  Circles (Up to 3)
+                  Share Your Progress
                 </h3>
-                <div className="mt-2 flex gap-2">
-                  <input
-                    className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-                    placeholder="Friend or family name"
-                    value={newCircleMember}
-                    onChange={(event) => setNewCircleMember(event.target.value)}
-                  />
+                <div className="mt-2 grid gap-2 text-sm text-slate-700">
+                  <p>
+                    Finished your daily session? Keep yourself accountable by sharing your progress with friends and family.
+                  </p>
                   <button
                     type="button"
-                    onClick={addCircleMember}
-                    className="rounded-lg bg-emerald-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-800"
+                    onClick={() => {
+                      const shareText = `I just completed a session on Quran Journeys! I'm on a ${streak}-day streak and have finished ${progress}% of my goal. Join me: https://quranjourneys.app`;
+                      navigator.clipboard.writeText(shareText);
+                      alert("Progress copied to clipboard!");
+                    }}
+                    className="mt-3 rounded-lg bg-emerald-900 px-4 py-2 font-semibold text-white transition hover:bg-emerald-800"
                   >
-                    Add
+                    Copy Share Link
                   </button>
-                </div>
-                <div className="mt-3 grid gap-2">
-                  {circleMembers.length ? (
-                    circleMembers.map((member) => (
-                      <div
-                        key={member}
-                        className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2"
-                      >
-                        <span className="text-sm text-slate-700">{member}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeCircleMember(member)}
-                          className="text-xs font-semibold text-rose-700"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-xs text-slate-600">
-                      Add 1-3 members to create accountability momentum.
-                    </p>
-                  )}
                 </div>
               </article>
             </section>
@@ -1168,7 +1132,7 @@ export default function Home() {
                           {currentDay?.verses.slice(0, 3).map((verse) => (
                             <a
                               key={verse.key}
-                              href={`https://quran.com/${verse.key.replace(":", "/")}?translations=131`}
+                              href={`https://quran.com/${verse.key.replace(":", "/")}?translations=85`}
                               target="_blank"
                               rel="noreferrer"
                               className="rounded-full border border-amber-300 bg-white px-3 py-1 font-semibold text-amber-900"
@@ -1269,12 +1233,6 @@ export default function Home() {
                     >
                       Complete Session
                     </button>
-
-                    {sessionFeedbackMessage ? (
-                      <p className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-xs text-emerald-900">
-                        {sessionFeedbackMessage}
-                      </p>
-                    ) : null}
                   </div>
                 )}
               </section>

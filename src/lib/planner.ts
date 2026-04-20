@@ -56,9 +56,17 @@ export function buildSevenDayPlan(
 
   for (let day = 0; day < 7; day += 1) {
     const start = startIndex + day * ayahsPerDay;
-    const verses = Array.from({ length: ayahsPerDay }, (_, index) => {
-      return sourceVerses[(start + index) % sourceVerses.length];
-    });
+    const verses = [];
+    for (let index = 0; index < ayahsPerDay; index += 1) {
+      const verse = sourceVerses[start + index];
+      if (verse) {
+        verses.push(verse);
+      }
+    }
+
+    if (verses.length === 0) {
+      break;
+    }
 
     plan.push({
       dayIndex: day + 1,
@@ -110,9 +118,17 @@ export function adjustRemainingPlan(
       versePool.findIndex((verse) => verse.key === firstKey),
     );
 
-    const verses = Array.from({ length: targetCount }, (_, index) => {
-      return versePool[(startIndex + index) % versePool.length];
-    });
+    const verses = [];
+    for (let index = 0; index < targetCount; index += 1) {
+      const verse = versePool[startIndex + index];
+      if (verse) {
+        verses.push(verse);
+      }
+    }
+
+    if (verses.length === 0) {
+      return day;
+    }
 
     return {
       ...day,
