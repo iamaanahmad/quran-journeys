@@ -102,7 +102,7 @@ npm run dev
 - `QF_USER_API_KEY` (optional): user access token sent as `x-auth-token` (for local testing only)
 - `QF_OAUTH_BASE_URL` (optional): OAuth base for authorization/code exchange, defaults to env-specific Quran Foundation hosts
 - `QF_OAUTH_REDIRECT_URI` (optional): callback URL registered with QF, defaults to `${NEXT_PUBLIC_APP_URL}/api/qf-auth/callback`
-- `QF_OAUTH_SCOPE` (optional): defaults to `openid profile offline_access`
+- `QF_OAUTH_SCOPE` (optional): defaults to `openid profile`
 
 Authorization Code + PKCE backend routes:
 - `GET /api/qf-auth/start` initiates `/oauth2/auth`

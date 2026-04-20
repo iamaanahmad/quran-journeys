@@ -9,8 +9,8 @@ export interface QfOidcConfig {
 }
 
 const defaultOauthByEnv: Record<string, string> = {
-  production: "https://oauth2.quran.foundation",
-  prelive: "https://oauth2-prelive.quran.foundation",
+  production: "https://apis.quran.foundation/auth",
+  prelive: "https://apis-prelive.quran.foundation/auth",
 };
 
 function base64Url(input: Buffer): string {
@@ -50,7 +50,8 @@ export function getQfOidcConfig(origin?: string): QfOidcConfig {
     (originUrl ? `${originUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "") ||
     (appUrl ? `${appUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "");
 
-  const scope = (process.env.QF_OAUTH_SCOPE ?? "openid profile offline_access").trim();
+  // Keep default scope minimal for broad provider compatibility.
+  const scope = (process.env.QF_OAUTH_SCOPE ?? "openid profile").trim();
 
   if (!clientId) {
     throw new Error("Missing QF_CLIENT_ID (or QURAN_CLIENT_ID)");

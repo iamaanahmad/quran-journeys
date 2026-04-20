@@ -134,6 +134,14 @@ function filterThemeVerses(verses: VerseItem[], theme: string): VerseItem[] {
   return filtered.length >= 8 ? filtered : verses;
 }
 
+function getTranslationId(language: string): number {
+  const norm = language.toLowerCase();
+  if (norm.includes("urdu")) return 54;
+  if (norm.includes("spanish")) return 83;
+  if (norm.includes("french")) return 31;
+  return 85; // Default English (M.A.S. Abdel Haleem)
+}
+
 export async function POST(request: Request) {
   const goal = (await request.json()) as GoalSetup;
 
@@ -148,8 +156,10 @@ export async function POST(request: Request) {
   const themeChapters =
     goal.goalType === "theme" ? pickThemeChapters(goal.target) : [chapterNumber];
 
+  const translationId = getTranslationId(goal.language || "English");
+
   const chapterSources = await Promise.all(
-    themeChapters.map((chapter) => fetchQuranFoundationVerses(chapter, 30)),
+    themeChapters.map((chapter) => fetchQuranFoundationVerses(chapter, 100, translationId)),
   );
 
   const quranVerses = chapterSources.flat();

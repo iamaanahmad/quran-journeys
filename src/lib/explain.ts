@@ -1,9 +1,6 @@
 import type { ExplanationResult, VerseItem } from "@/lib/types";
 
 function fallbackExplanation(verses: VerseItem[]): ExplanationResult {
-  const combined = verses.map((verse) => verse.translation).join(" ");
-  const highlight = combined.split(".").slice(0, 2).join(". ").trim();
-
   return {
     keyPoints: [
       "These verses call for conscious faith, disciplined worship, and ethical action.",
@@ -12,8 +9,7 @@ function fallbackExplanation(verses: VerseItem[]): ExplanationResult {
       "Small daily reflection can prevent drift and strengthen inner clarity.",
     ],
     simpleSummary:
-      highlight ||
-      "This passage emphasizes sincere belief, consistent worship, and honest self-accountability.",
+      "This passage emphasizes sincere belief, consistent worship, and honest self-accountability. Think of faith here like the foundational architecture of a system—if the core is strong and sincere, the entire implementation (your daily actions) will be robust and reliable.",
     reflectionPrompts: [
       "What one decision today can better align with these verses?",
       "Where do I need more sincerity between what I say and what I actually do?",
@@ -49,7 +45,7 @@ export async function generateExplanation(
         systemInstruction: {
           parts: [
             {
-              text: "You explain Quran verses for busy professionals in plain, respectful language. Avoid legal rulings. Keep output concise, practical, spiritually grounded, and free of sectarian claims.",
+              text: "You explain Quran verses for busy professionals (developers, founders, executives) in plain, respectful, modern language. Avoid legal rulings or fatwas. Synthesize the meaning into a cohesive paragraph for 'simpleSummary' rather than just translating word-for-word. Crucially, include 1-2 professional or developer-style analogies (e.g., comparing 'Taqwa' to an error-handling system, or 'Sabr' to a long-term investment strategy) to make it memorable. Keep output concise, practical, spiritually grounded, and free of sectarian claims. Write your response in the SAME LANGUAGE as the translated verses provided by the user.",
             },
           ],
         },

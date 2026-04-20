@@ -24,6 +24,7 @@ function buildAudioUrl(verseKey: string): string {
 export async function fetchQuranFoundationVerses(
   chapterNumber = 2,
   limit = 42,
+  translationId = 85 // Default: 85 (Abdul Haleem). 54 (Urdu Junagarhi), 83 (Spanish), 31 (French).
 ): Promise<VerseItem[]> {
   try {
     const [uthmaniResponse, translationResponse] = await Promise.all([
@@ -35,7 +36,7 @@ export async function fetchQuranFoundationVerses(
         },
       ),
       fetch(
-        `https://api.quran.com/api/v4/quran/translations/131?chapter_number=${chapterNumber}`,
+        `https://api.quran.com/api/v4/quran/translations/${translationId}?chapter_number=${chapterNumber}`,
         {
           next: { revalidate: 3600 },
           headers: { Accept: "application/json" },
@@ -54,18 +55,18 @@ export async function fetchQuranFoundationVerses(
       return [];
     }
 
-    const translationMap = new Map(
-      translations.translations.map((item) => [item.verse_key, item.text]),
-    );
-
-    const verses: VerseItem[] = uthmani.verses.slice(0, limit).map((item) => {
+    const verses: VerseItem[] = uthmani.verses.slice(0, limit).map((item, index) => {
       const [surah, ayah] = item.verse_key.split(":").map(Number);
+      // Strip HTML tags like <sup> for pure text
+      const rawText = translations.translations?.[index]?.text || "";
+      const cleanText = rawText.replace(/<[^>]*>/g, "");
+
       return {
         key: item.verse_key,
         surah,
         ayah,
         arabic: item.text_uthmani,
-        translation: translationMap.get(item.verse_key) ?? "",
+        translation: cleanText,
         audioUrl: buildAudioUrl(item.verse_key),
       };
     });

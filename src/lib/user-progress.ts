@@ -161,6 +161,11 @@ async function tryFetchRemoteProgress(
     throw new Error("No Quran User API endpoint configured");
   }
 
+  const token = (accessToken ?? quranApiKey).trim();
+  if (!token) {
+    throw new Error("Quran account not connected (missing auth token).");
+  }
+
   const headers = buildAuthHeaders(accessToken);
 
   const response = await fetch(apiUrl, {
@@ -193,6 +198,11 @@ async function trySyncRemoteProgress(
   const apiUrl = buildActivityDaysUrl();
   if (!apiUrl) {
     throw new Error("No Quran User API endpoint configured");
+  }
+
+  const token = (accessToken ?? quranApiKey).trim();
+  if (!token) {
+    throw new Error("Quran account not connected (missing auth token).");
   }
 
   const headers = buildAuthHeaders(accessToken, timezone);
