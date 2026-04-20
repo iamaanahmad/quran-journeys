@@ -37,15 +37,6 @@ const moodOptions: MoodTag[] = [
   "tired",
 ];
 
-interface ApiEvidence {
-  contentSource: "quran-foundation" | "demo-fallback" | "unknown";
-  contentCheckedAt: string | null;
-  contentDetails: string;
-  userProgressSource: "local" | "quran-foundation" | "unknown";
-  userProgressCheckedAt: string | null;
-  userProgressDetails: string;
-}
-
 interface WeeklyInsight {
   totalMinutes: number;
   completedSessions: number;
@@ -201,15 +192,7 @@ export default function Home() {
     source: "not-synced",
     message: "Not synced yet",
   });
-  const [apiEvidence, setApiEvidence] = useState<ApiEvidence>({
-    contentSource: "unknown",
-    contentCheckedAt: null,
-    contentDetails: "No plan generated yet",
-    userProgressSource: "local",
-    userProgressCheckedAt: new Date().toISOString(),
-    userProgressDetails: "Progress tracked locally in app database",
-  });
-  const [circleMembers, setCircleMembers] = useState<string[]>([]);
+const [circleMembers, setCircleMembers] = useState<string[]>([]);
   const [newCircleMember, setNewCircleMember] = useState("");
   const [tourDismissed, setTourDismissed] = useState(false);
   const [runtimeNotice, setRuntimeNotice] = useState("");
@@ -271,42 +254,6 @@ export default function Home() {
 
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state, authUser]);
-
-  useEffect(() => {
-    if (!state) {
-      setApiEvidence((previous) => ({
-        ...previous,
-        contentSource: "unknown",
-        contentCheckedAt: null,
-        contentDetails: "No plan loaded yet",
-      }));
-      return;
-    }
-
-    if (apiEvidence.contentCheckedAt) {
-      return;
-    }
-
-    if (!state.plan.length) {
-      setApiEvidence((previous) => ({
-        ...previous,
-        contentSource: "unknown",
-        contentCheckedAt: new Date().toISOString(),
-        contentDetails: "Loaded journey has no plan items yet",
-      }));
-      return;
-    }
-
-    const firstDay = state.plan[0];
-    const lastDay = state.plan[state.plan.length - 1];
-
-    setApiEvidence((previous) => ({
-      ...previous,
-      contentSource: "unknown",
-      contentCheckedAt: new Date().toISOString(),
-      contentDetails: `Loaded plan ${firstDay.fromAyahKey} -> ${lastDay.toAyahKey}. Source metadata unavailable for persisted plan.`,
-    }));
-  }, [state, apiEvidence.contentCheckedAt]);
 
   const currentDay = useMemo(() => {
     if (!state?.plan.length) {
@@ -439,27 +386,8 @@ export default function Home() {
       }
 
       const payload = (await response.json()) as UserProgressSyncResponse;
-      const source = payload.source === "quran-foundation" ? "quran-foundation" : "local";
-      const details = payload.warning
-        ? `${payload.remoteDetails ?? ""}; ${payload.warning}`
-        : payload.remoteDetails ?? "Progress synced from Quran Foundation User API";
-
-      setApiEvidence((previous) => ({
-        ...previous,
-        userProgressSource: source,
-        userProgressCheckedAt: new Date().toISOString(),
-        userProgressDetails: `${details} (status ${payload.status ?? response.status})`,
-      }));
     } catch (error) {
-      setApiEvidence((previous) => ({
-        ...previous,
-        userProgressSource: "local",
-        userProgressCheckedAt: new Date().toISOString(),
-        userProgressDetails:
-          error instanceof Error
-            ? `User progress fallback: ${error.message}`
-            : "User progress fallback to local",
-      }));
+      console.warn("User progress refresh fallback to local", error);
     }
   }, []);
 
@@ -503,28 +431,8 @@ export default function Home() {
       }
 
       const result = (await response.json()) as UserProgressSyncResponse;
-
-      const source = result.source === "quran-foundation" ? "quran-foundation" : "local";
-      const details = result.warning
-        ? `${result.remoteDetails ?? ""}; ${result.warning}`
-        : result.remoteDetails ?? "Progress synced through user-progress endpoint";
-
-      setApiEvidence((previous) => ({
-        ...previous,
-        userProgressSource: source,
-        userProgressCheckedAt: new Date().toISOString(),
-        userProgressDetails: `${details} (status ${result.status ?? response.status})`,
-      }));
     } catch (error) {
-      setApiEvidence((previous) => ({
-        ...previous,
-        userProgressSource: "local",
-        userProgressCheckedAt: new Date().toISOString(),
-        userProgressDetails:
-          error instanceof Error
-            ? `User API sync failed, local fallback: ${error.message}`
-            : "User API sync failed, local fallback",
-      }));
+      console.warn("User progress sync fallback to local", error);
     }
   }, []);
 
@@ -568,15 +476,6 @@ export default function Home() {
         const remoteState = await loadJourneyStateFromPrefs();
         if (remoteState) {
           setState(remoteState);
-          // Reset API evidence for loaded state
-          setApiEvidence({
-            contentSource: "unknown",
-            contentCheckedAt: new Date().toISOString(),
-            contentDetails: `Loaded existing plan. Generate a new plan to see live API evidence.`,
-            userProgressSource: "local",
-            userProgressCheckedAt: new Date().toISOString(),
-            userProgressDetails: "Progress tracked locally in app database",
-          });
           await refreshUserProgressStatus(currentUser.id);
           return;
         }
@@ -586,16 +485,7 @@ export default function Home() {
             const localState = JSON.parse(localRaw) as JourneyState;
             await saveJourneyStateToPrefs(localState);
             setState(localState);
-            // Reset API evidence for loaded state
-            setApiEvidence({
-              contentSource: "unknown",
-              contentCheckedAt: new Date().toISOString(),
-              contentDetails: `Loaded existing plan. Generate a new plan to see live API evidence.`,
-              userProgressSource: "local",
-              userProgressCheckedAt: new Date().toISOString(),
-              userProgressDetails: "Progress tracked locally in app database",
-            });
-            await syncUserProgress(localState, currentUser.id);
+          await syncUserProgress(localState, currentUser.id);
             return;
           } catch {
             window.localStorage.removeItem(STORAGE_KEY);
@@ -612,17 +502,6 @@ export default function Home() {
 
           const guestUserId = getProgressUserId(null);
           await syncUserProgress(localState, guestUserId);
-
-          // Reset API evidence for loaded state
-          setApiEvidence({
-            contentSource: "unknown",
-            contentCheckedAt: new Date().toISOString(),
-            contentDetails: `Loaded existing plan. Generate a new plan to see live API evidence.`,
-            userProgressSource: "local",
-            userProgressCheckedAt: new Date().toISOString(),
-            userProgressDetails: "Progress tracked locally in app database",
-          });
-
           updateSyncState({
             source: "local",
             message: "Progress tracked locally. Sign in to sync across devices.",
@@ -904,64 +783,7 @@ export default function Home() {
               </div>
             </section>
 
-            <section className={`${appView === "dashboard" ? "grid" : "hidden"} gap-4 md:grid-cols-4`}>
-              <article className="rounded-2xl border border-emerald-900/15 bg-white/85 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                  Goal
-                </p>
-                <p className="mt-2 text-lg font-semibold">{state.goal.target}</p>
-              </article>
-              <article className="rounded-2xl border border-emerald-900/15 bg-white/85 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                  Progress
-                </p>
-                <p className="mt-2 text-lg font-semibold">{progress}%</p>
-              </article>
-              <article className="rounded-2xl border border-emerald-900/15 bg-white/85 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                  Streak
-                </p>
-                <p className="mt-2 text-lg font-semibold">{streak} days</p>
-              </article>
-              <article className="rounded-2xl border border-emerald-900/15 bg-white/85 p-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
-                  Minutes this month
-                </p>
-                <p className="mt-2 text-lg font-semibold">{monthMinutes}</p>
-              </article>
-            </section>
-
-            <section className={`${appView === "dashboard" ? "block" : "hidden"} rounded-2xl border border-emerald-900/15 bg-white/85 p-4`}>
-              <h3 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-600">
-                Live API Evidence
-              </h3>
-              <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
-                <article className="rounded-xl border border-slate-200 bg-white p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                    Quran Content API
-                  </p>
-                  <p className="mt-1 font-semibold text-slate-800">
-                    Source: {apiEvidence.contentSource}
-                  </p>
-                  <p className="text-xs text-slate-600">
-                    Checked: {formatTimestamp(apiEvidence.contentCheckedAt)}
-                  </p>
-                  <p className="text-xs text-slate-600">{apiEvidence.contentDetails}</p>
-                </article>
-                <article className="rounded-xl border border-slate-200 bg-white p-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                    Quran User API
-                  </p>
-                  <p className="mt-1 font-semibold text-slate-800">
-                    Source: {apiEvidence.userProgressSource}
-                  </p>
-                  <p className="text-xs text-slate-600">
-                    Checked: {formatTimestamp(apiEvidence.userProgressCheckedAt)}
-                  </p>
-                  <p className="text-xs text-slate-600">{apiEvidence.userProgressDetails}</p>
-                </article>
-              </div>
-            </section>
+            
 
             <section className={`${appView === "insights" ? "grid" : "hidden"} gap-4 rounded-2xl border border-emerald-900/15 bg-white/85 p-4 md:grid-cols-[1.2fr_1fr]`}>
               <article className="rounded-xl border border-slate-200 bg-white p-4">
@@ -1262,3 +1084,6 @@ export default function Home() {
     </div>
   );
 }
+
+
+
