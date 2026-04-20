@@ -687,10 +687,23 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
   const regularTextClass = highContrast ? "text-zinc-300" : "text-slate-700";
 
   return (
-    <div className={`relative min-h-screen overflow-x-hidden transition-colors ${highContrast ? "bg-black text-white" : "bg-[radial-gradient(circle_at_top,_#f7f1d8_0%,_#f8f4e8_35%,_#e8efe6_100%)] text-slate-900"}`}>
-      {!highContrast && <div className="pointer-events-none absolute inset-0 opacity-25 [background:linear-gradient(120deg,transparent_0%,rgba(13,95,78,0.08)_25%,transparent_55%),linear-gradient(0deg,rgba(189,147,69,0.06),rgba(189,147,69,0.06))]" />}
+    <>
+      {highContrast && (
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            body { background: black !important; color: white !important; }
+            body > div > header.sticky { background: rgb(24 24 27 / 0.8) !important; border-color: rgba(255, 255, 255, 0.15) !important; }
+            body > div > header.sticky span { color: white !important; }
+            body > div > footer { background: rgb(24 24 27 / 0.8) !important; border-color: rgba(255, 255, 255, 0.15) !important; color: #a1a1aa !important; }
+            body > div > footer a { color: #34d399 !important; }
+            .pointer-events-none.fixed { display: none !important; }
+          `
+        }} />
+      )}
+      <div className={`relative min-h-screen overflow-x-hidden transition-colors ${highContrast ? "bg-black text-white" : "bg-transparent text-slate-900"}`}>
+        {!highContrast && <div className="pointer-events-none absolute inset-0 opacity-25 [background:linear-gradient(120deg,transparent_0%,rgba(13,95,78,0.08)_25%,transparent_55%),linear-gradient(0deg,rgba(189,147,69,0.06),rgba(189,147,69,0.06))]" />}
 
-      <main className={`relative mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8 ${baseFontClasses}`}>
+        <main className={`relative mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8 ${baseFontClasses}`}>
         <header className={`rounded-3xl border p-6 backdrop-blur-md md:p-8 ${highContrast ? "bg-black border-white/20" : "bg-white/75 border-emerald-900/15"}`}>
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -1247,6 +1260,7 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
 
       </main>
     </div>
+    </>
   );
 }
 
