@@ -51,7 +51,7 @@ export function getQfOidcConfig(origin?: string): QfOidcConfig {
     (appUrl ? `${appUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "");
 
   // Keep default scope minimal for broad provider compatibility.
-  const scope = (process.env.QF_OAUTH_SCOPE ?? "openid").trim();
+  const scope = (process.env.QF_OAUTH_SCOPE ?? "openid profile email").trim();
 
   if (!clientId) {
     throw new Error("Missing QF_CLIENT_ID (or QURAN_CLIENT_ID)");

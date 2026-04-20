@@ -10,9 +10,10 @@ const COOKIE_MAX_AGE = 60 * 10;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.QF_OAUTH_REDIRECT_URI?.replace(/\/api\/qf-auth\/callback$/, "") || url.origin).replace(/\/$/, "");
   const nextPath = url.searchParams.get("next") || "/app";
 
-  const config = getQfOidcConfig(url.origin);
+  const config = getQfOidcConfig(appUrl);
   const verifier = generatePkceVerifier();
   const challenge = generatePkceChallenge(verifier);
   const state = generateStateToken();

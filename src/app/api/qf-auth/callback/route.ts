@@ -12,6 +12,7 @@ function toErrorRedirect(origin: string, nextPath: string, message: string) {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.QF_OAUTH_REDIRECT_URI?.replace(/\/api\/qf-auth\/callback$/, "") || url.origin).replace(/\/$/, "");
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const oauthError = url.searchParams.get("error");
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
       .filter(Boolean)
       .map((part) => {
         const idx = part.indexOf("=");
-        return [part.slice(0, idx), decodeURIComponent(part.slice(idx + 1))];
+        return [part.slice(0, idx), decodeURIComponent(part.slice(idx + 1))];   
       }),
   );
 
@@ -32,29 +33,29 @@ export async function GET(request: Request) {
 
   if (oauthError) {
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, `oauth_${oauthError}`).toString(),
+      toErrorRedirect(appUrl, nextPath, `oauth_${oauthError}`).toString(),
     );
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, "missing_code_or_state").toString(),
+      toErrorRedirect(appUrl, nextPath, "missing_code_or_state").toString(),
     );
   }
 
   if (!cookies.qf_oauth_state || cookies.qf_oauth_state !== state) {
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, "invalid_state").toString(),
+      toErrorRedirect(appUrl, nextPath, "invalid_state").toString(),
     );
   }
 
   if (!cookies.qf_pkce_verifier) {
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, "missing_pkce_verifier").toString(),
+      toErrorRedirect(appUrl, nextPath, "missing_pkce_verifier").toString(),
     );
   }
 
-  const config = getQfOidcConfig(url.origin);
+  const config = getQfOidcConfig(appUrl);
   const tokenUrl = `${config.oauthBaseUrl}/oauth2/token`;
 
   const tokenResponse = await fetch(tokenUrl, {
@@ -76,7 +77,7 @@ export async function GET(request: Request) {
   if (!tokenResponse.ok) {
     const errText = await tokenResponse.text();
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, `token_exchange_failed_${tokenResponse.status}:${errText.slice(0, 80)}`).toString(),
+      toErrorRedirect(appUrl, nextPath, `token_exchange_failed_${tokenResponse.status}:${errText.slice(0, 80)}`).toString(),
     );
   }
 
@@ -89,11 +90,11 @@ export async function GET(request: Request) {
 
   if (!payload.access_token) {
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, "missing_access_token").toString(),
+      toErrorRedirect(appUrl, nextPath, "missing_access_token").toString(),
     );
   }
 
-  const target = new URL(nextPath, url.origin);
+  const target = new URL(nextPath, appUrl);
   target.searchParams.set("qf", "connected");
 
   const response = NextResponse.redirect(target.toString());
