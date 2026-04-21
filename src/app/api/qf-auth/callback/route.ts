@@ -93,9 +93,9 @@ export async function GET(request: Request) {
 
   const response = NextResponse.redirect(target.toString());
   const expiresIn = Math.max(300, payload.expires_in ?? 3600);
-  const secure = process.env.NODE_ENV === "production";
+  const secure = appUrl.startsWith("https");
 
-  response.cookies.set("qf_access_token", payload.access_token, {
+  cookieStore.set("qf_access_token", payload.access_token, {
     httpOnly: true,
     sameSite: "lax",
     secure,
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
   });
 
   if (payload.refresh_token) {
-    response.cookies.set("qf_refresh_token", payload.refresh_token, {
+    cookieStore.set("qf_refresh_token", payload.refresh_token, {
       httpOnly: true,
       sameSite: "lax",
       secure,
@@ -114,7 +114,7 @@ export async function GET(request: Request) {
   }
 
   if (payload.id_token) {
-    response.cookies.set("qf_id_token", payload.id_token, {
+    cookieStore.set("qf_id_token", payload.id_token, {
       httpOnly: true,
       sameSite: "lax",
       secure,
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
     });
   }
 
-  response.cookies.set("qf_token_expires_at", String(Date.now() + expiresIn * 1000), {
+  cookieStore.set("qf_token_expires_at", String(Date.now() + expiresIn * 1000), {
     httpOnly: true,
     sameSite: "lax",
     secure,
@@ -131,9 +131,9 @@ export async function GET(request: Request) {
     maxAge: expiresIn,
   });
 
-  response.cookies.delete("qf_oauth_state");
-  response.cookies.delete("qf_pkce_verifier");
-  response.cookies.delete("qf_oauth_next");
+  cookieStore.delete("qf_oauth_state");
+  cookieStore.delete("qf_pkce_verifier");
+  cookieStore.delete("qf_oauth_next");
 
   return response;
 }

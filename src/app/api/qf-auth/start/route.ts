@@ -5,6 +5,7 @@ import {
   getQfOidcConfig,
 } from "@/lib/qf-oidc";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 const COOKIE_MAX_AGE = 60 * 10;
 
@@ -29,28 +30,27 @@ export async function GET(request: Request) {
 
   const response = NextResponse.redirect(authUrl.toString());
   
-  // Try to avoid dropping cookies if secure flag is causing problems across proxies.
-  // In Nextjs behind proxies without X-Forwarded-Proto sometimes secure cookie drops
-  const isProd = process.env.NODE_ENV === "production";
+  const isSecure = appUrl.startsWith("https");
+  const cookieStore = await cookies();
   
-  response.cookies.set("qf_oauth_state", state, {
+  cookieStore.set("qf_oauth_state", state, {
     httpOnly: true,
     sameSite: "lax",
-    secure: isProd,
+    secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
-  response.cookies.set("qf_pkce_verifier", verifier, {
+  cookieStore.set("qf_pkce_verifier", verifier, {
     httpOnly: true,
     sameSite: "lax",
-    secure: isProd,
+    secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
-  response.cookies.set("qf_oauth_next", nextPath, {
+  cookieStore.set("qf_oauth_next", nextPath, {
     httpOnly: true,
     sameSite: "lax",
-    secure: isProd,
+    secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
