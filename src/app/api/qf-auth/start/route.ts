@@ -28,25 +28,29 @@ export async function GET(request: Request) {
   authUrl.searchParams.set("code_challenge_method", "S256");
 
   const response = NextResponse.redirect(authUrl.toString());
-  const secure = process.env.NODE_ENV === "production";
+  
+  // Try to avoid dropping cookies if secure flag is causing problems across proxies.
+  // In Nextjs behind proxies without X-Forwarded-Proto sometimes secure cookie drops
+  const isProd = process.env.NODE_ENV === "production";
+  
   response.cookies.set("qf_oauth_state", state, {
     httpOnly: true,
     sameSite: "lax",
-    secure,
+    secure: isProd,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
   response.cookies.set("qf_pkce_verifier", verifier, {
     httpOnly: true,
     sameSite: "lax",
-    secure,
+    secure: isProd,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
   response.cookies.set("qf_oauth_next", nextPath, {
     httpOnly: true,
     sameSite: "lax",
-    secure,
+    secure: isProd,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });

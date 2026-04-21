@@ -1,5 +1,6 @@
 import { getQfOidcConfig } from "@/lib/qf-oidc";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 const DAY = 60 * 60 * 24;
 
@@ -17,19 +18,12 @@ export async function GET(request: Request) {
   const state = url.searchParams.get("state");
   const oauthError = url.searchParams.get("error");
 
-  const cookieHeader = request.headers.get("cookie") || "";
-  const cookies = Object.fromEntries(
-    cookieHeader
-      .split(";")
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => {
-        const idx = part.indexOf("=");
-        return [part.slice(0, idx), decodeURIComponent(part.slice(idx + 1))];   
-      }),
-  );
+  const cookieStore = await cookies();
+  const qf_oauth_state = cookieStore.get("qf_oauth_state")?.value;
+  const qf_pkce_verifier = cookieStore.get("qf_pkce_verifier")?.value;
+  const qf_oauth_next = cookieStore.get("qf_oauth_next")?.value;
 
-  const nextPath = cookies.qf_oauth_next || "/app";
+  const nextPath = qf_oauth_next || "/app";
 
   if (oauthError) {
     return NextResponse.redirect(
@@ -43,13 +37,13 @@ export async function GET(request: Request) {
     );
   }
 
-  if (!cookies.qf_oauth_state || cookies.qf_oauth_state !== state) {
+  if (!qf_oauth_state || qf_oauth_state !== state) {
     return NextResponse.redirect(
       toErrorRedirect(appUrl, nextPath, "invalid_state").toString(),
     );
   }
 
-  if (!cookies.qf_pkce_verifier) {
+  if (!qf_pkce_verifier) {
     return NextResponse.redirect(
       toErrorRedirect(appUrl, nextPath, "missing_pkce_verifier").toString(),
     );
@@ -69,7 +63,7 @@ export async function GET(request: Request) {
       code,
       redirect_uri: config.redirectUri,
       client_id: config.clientId,
-      code_verifier: cookies.qf_pkce_verifier,
+      code_verifier: qf_pkce_verifier,
       ...(config.clientSecret ? { client_secret: config.clientSecret } : {}),
     }).toString(),
   });
