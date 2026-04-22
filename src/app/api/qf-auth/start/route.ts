@@ -7,6 +7,8 @@ import {
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+export const dynamic = "force-dynamic";
+
 const COOKIE_MAX_AGE = 60 * 10;
 
 export async function GET(request: Request) {
@@ -35,21 +37,21 @@ export async function GET(request: Request) {
   
   cookieStore.set("qf_oauth_state", state, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "none",
     secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
   cookieStore.set("qf_pkce_verifier", verifier, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "none",
     secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
   cookieStore.set("qf_oauth_next", nextPath, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: "none",
     secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,

@@ -2,6 +2,8 @@ import { getQfOidcConfig } from "@/lib/qf-oidc";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
+export const dynamic = "force-dynamic";
+
 const DAY = 60 * 60 * 24;
 
 function toErrorRedirect(origin: string, nextPath: string, message: string) {
