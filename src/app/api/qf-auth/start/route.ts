@@ -33,25 +33,30 @@ export async function GET(request: Request) {
   const response = NextResponse.redirect(authUrl.toString());
   
   const isSecure = appUrl.startsWith("https");
-  const cookieStore = await cookies();
   
-  cookieStore.set("qf_oauth_state", state, {
+  response.cookies.set({
+    name: "qf_oauth_state",
+    value: state,
     httpOnly: true,
-    sameSite: "none",
+    sameSite: "lax",
     secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
-  cookieStore.set("qf_pkce_verifier", verifier, {
+  response.cookies.set({
+    name: "qf_pkce_verifier",
+    value: verifier,
     httpOnly: true,
-    sameSite: "none",
+    sameSite: "lax",
     secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
-  cookieStore.set("qf_oauth_next", nextPath, {
+  response.cookies.set({
+    name: "qf_oauth_next",
+    value: nextPath,
     httpOnly: true,
-    sameSite: "none",
+    sameSite: "lax",
     secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,

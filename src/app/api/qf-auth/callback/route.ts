@@ -97,7 +97,9 @@ export async function GET(request: Request) {
   const expiresIn = Math.max(300, payload.expires_in ?? 3600);
   const secure = appUrl.startsWith("https");
 
-  cookieStore.set("qf_access_token", payload.access_token, {
+  response.cookies.set({
+    name: "qf_access_token",
+    value: payload.access_token,
     httpOnly: true,
     sameSite: "lax",
     secure,
@@ -106,7 +108,9 @@ export async function GET(request: Request) {
   });
 
   if (payload.refresh_token) {
-    cookieStore.set("qf_refresh_token", payload.refresh_token, {
+    response.cookies.set({
+      name: "qf_refresh_token",
+      value: payload.refresh_token,
       httpOnly: true,
       sameSite: "lax",
       secure,
@@ -116,7 +120,9 @@ export async function GET(request: Request) {
   }
 
   if (payload.id_token) {
-    cookieStore.set("qf_id_token", payload.id_token, {
+    response.cookies.set({
+      name: "qf_id_token",
+      value: payload.id_token,
       httpOnly: true,
       sameSite: "lax",
       secure,
@@ -125,7 +131,9 @@ export async function GET(request: Request) {
     });
   }
 
-  cookieStore.set("qf_token_expires_at", String(Date.now() + expiresIn * 1000), {
+  response.cookies.set({
+    name: "qf_token_expires_at",
+    value: String(Date.now() + expiresIn * 1000),
     httpOnly: true,
     sameSite: "lax",
     secure,
@@ -133,9 +141,25 @@ export async function GET(request: Request) {
     maxAge: expiresIn,
   });
 
-  cookieStore.delete("qf_oauth_state");
-  cookieStore.delete("qf_pkce_verifier");
-  cookieStore.delete("qf_oauth_next");
+  // Clear OAuth state cookies
+  response.cookies.set({
+    name: "qf_oauth_state",
+    value: "",
+    maxAge: 0,
+    path: "/",
+  });
+  response.cookies.set({
+    name: "qf_pkce_verifier",
+    value: "",
+    maxAge: 0,
+    path: "/",
+  });
+  response.cookies.set({
+    name: "qf_oauth_next",
+    value: "",
+    maxAge: 0,
+    path: "/",
+  });
 
   return response;
 }
