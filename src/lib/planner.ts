@@ -58,7 +58,9 @@ export function buildSevenDayPlan(
     const start = startIndex + day * ayahsPerDay;
     const verses = [];
     for (let index = 0; index < ayahsPerDay; index += 1) {
-      const verse = sourceVerses[start + index];
+      // Loop around to the beginning if we run out of demo verses
+      const realIndex = (start + index) % sourceVerses.length;
+      const verse = sourceVerses[realIndex];
       if (verse) {
         verses.push(verse);
       }
