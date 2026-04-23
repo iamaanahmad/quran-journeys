@@ -226,7 +226,7 @@ export default function LandingPage() {
                         ? "Juz 1"
                         : card.key === "theme"
                           ? "Sabr (Patience)"
-                          : previous.target,
+                          : "Surah Al-Baqarah",
                   }))
                 }
                 className={`rounded-2xl border p-4 text-left transition ${
@@ -256,7 +256,13 @@ export default function LandingPage() {
                     target: event.target.value,
                   }))
                 }
-                placeholder="Surah Al-Baqarah / Sabr / Juz 1"
+                placeholder={
+                  goalForm.goalType === "khatam"
+                    ? "e.g., Juz 1"
+                    : goalForm.goalType === "theme"
+                      ? "e.g., Sabr (Patience)"
+                      : "e.g., Surah Al-Baqarah"
+                }
               />
             </div>
 
@@ -295,6 +301,7 @@ export default function LandingPage() {
                     profileRole: event.target.value,
                   }))
                 }
+                placeholder="e.g., Developer, Founder"
               />
             </div>
 
@@ -346,3 +353,4 @@ export default function LandingPage() {
     </div>
   );
 }
+
