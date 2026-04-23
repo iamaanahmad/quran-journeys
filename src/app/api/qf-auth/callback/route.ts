@@ -59,6 +59,13 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
+      ...(config.clientSecret
+        ? {
+            Authorization: `Basic ${Buffer.from(
+              `${config.clientId}:${config.clientSecret}`,
+            ).toString("base64")}`,
+          }
+        : {}),
     },
     body: new URLSearchParams({
       grant_type: "authorization_code",
