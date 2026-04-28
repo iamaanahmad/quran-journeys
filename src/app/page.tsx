@@ -39,6 +39,43 @@ const journeyCards: Array<{
   },
 ];
 
+const KHATAM_TARGET_OPTIONS = Array.from({ length: 30 }, (_, index) => {
+  const juz = index + 1;
+  return `Juz ${juz}`;
+});
+
+const THEME_TARGET_OPTIONS = [
+  "Sabr (Patience)",
+  "Rizq (Provision)",
+  "Mercy",
+  "Guidance",
+  "Gratitude",
+  "Stress and Ease",
+];
+
+const SURAH_TARGET_OPTIONS = [
+  "Surah Al-Fatiha",
+  "Surah Al-Baqarah",
+  "Surah Aal-Imran",
+  "Surah An-Nisa",
+  "Surah Al-Ma'idah",
+  "Surah Al-An'am",
+  "Surah Al-A'raf",
+  "Surah Al-Anfal",
+  "Surah At-Tawbah",
+  "Surah Yunus",
+  "Surah Yusuf",
+  "Surah Ar-Rahman",
+  "Surah Al-Mulk",
+  "Surah Al-Kahf",
+  "Surah Ya-Sin",
+  "Surah As-Sajdah",
+  "Surah Al-Waqiah",
+  "Surah Al-Ikhlas",
+  "Surah Al-Falaq",
+  "Surah An-Nas",
+];
+
 export default function LandingPage() {
   const router = useRouter();
   const [goalForm, setGoalForm] = useState<GoalSetup>(defaultGoal);
@@ -50,6 +87,20 @@ export default function LandingPage() {
   const onboardingHint = useMemo(() => {
     return `Takes less than 30 seconds. Explanations will adapt for ${goalForm.profileRole}.`;
   }, [goalForm.profileRole]);
+
+  const targetLabel =
+    goalForm.goalType === "khatam"
+      ? "Step 2: Juz target"
+      : goalForm.goalType === "theme"
+        ? "Step 2: Theme"
+        : "Step 2: Surah target";
+
+  const targetHint =
+    goalForm.goalType === "khatam"
+      ? "Choose the juz you want to begin from."
+      : goalForm.goalType === "theme"
+        ? "Pick a theme so the plan stays focused."
+        : "Choose a surah from the list or type a supported name.";
 
   useEffect(() => {
     async function bootstrap() {
@@ -244,26 +295,67 @@ export default function LandingPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-1 text-sm">
               <label htmlFor="target" className="font-semibold text-slate-700">
-                Step 2: Target
+                {targetLabel}
               </label>
-              <input
-                id="target"
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2"
-                value={goalForm.target}
-                onChange={(event) =>
-                  setGoalForm((previous) => ({
-                    ...previous,
-                    target: event.target.value,
-                  }))
-                }
-                placeholder={
-                  goalForm.goalType === "khatam"
-                    ? "e.g., Juz 1"
-                    : goalForm.goalType === "theme"
-                      ? "e.g., Sabr (Patience)"
-                      : "e.g., Surah Al-Baqarah"
-                }
-              />
+              {goalForm.goalType === "khatam" ? (
+                <select
+                  id="target"
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2"
+                  value={goalForm.target}
+                  onChange={(event) =>
+                    setGoalForm((previous) => ({
+                      ...previous,
+                      target: event.target.value,
+                    }))
+                  }
+                >
+                  {KHATAM_TARGET_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              ) : goalForm.goalType === "theme" ? (
+                <select
+                  id="target"
+                  className="rounded-xl border border-slate-300 bg-white px-3 py-2"
+                  value={goalForm.target}
+                  onChange={(event) =>
+                    setGoalForm((previous) => ({
+                      ...previous,
+                      target: event.target.value,
+                    }))
+                  }
+                >
+                  {THEME_TARGET_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <input
+                    id="target"
+                    className="rounded-xl border border-slate-300 bg-white px-3 py-2"
+                    value={goalForm.target}
+                    onChange={(event) =>
+                      setGoalForm((previous) => ({
+                        ...previous,
+                        target: event.target.value,
+                      }))
+                    }
+                    placeholder="Choose a surah"
+                    list="surah-targets"
+                  />
+                  <datalist id="surah-targets">
+                    {SURAH_TARGET_OPTIONS.map((option) => (
+                      <option key={option} value={option} />
+                    ))}
+                  </datalist>
+                </>
+              )}
+              <p className="text-xs text-slate-500">{targetHint}</p>
             </div>
 
             <div className="grid gap-1 text-sm">

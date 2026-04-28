@@ -36,6 +36,14 @@ function getStartIndex(goal: GoalSetup, sourceVerses: typeof DEMO_VERSES): numbe
     }
   }
 
+  const compactTarget = normalizedTarget.replace(/[^a-z0-9]+/g, "");
+  if (compactTarget.includes("waqiah")) {
+    const index = sourceVerses.findIndex((verse) => verse.surah === 56);
+    if (index >= 0) {
+      return index;
+    }
+  }
+
   return 0;
 }
 

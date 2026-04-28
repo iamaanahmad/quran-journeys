@@ -73,7 +73,6 @@ export async function GET(request: Request) {
       redirect_uri: config.redirectUri,
       client_id: config.clientId,
       code_verifier: qf_pkce_verifier,
-      ...(config.clientSecret ? { client_secret: config.clientSecret } : {}),
     }).toString(),
   });
 
