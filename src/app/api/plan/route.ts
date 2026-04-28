@@ -19,6 +19,7 @@ const SURAH_NAME_TO_CHAPTER: Record<string, number> = {
   rahman: 55,
   mulk: 67,
   ikhlas: 112,
+  waqiah: 56,
 };
 
 const JUZ_TO_START_CHAPTER: Record<number, number> = {
@@ -63,8 +64,18 @@ const THEME_TO_CHAPTERS: Record<string, number[]> = {
   stress: [13, 39, 65, 94],
 };
 
+function normalizeGoalText(value: string): string {
+  return value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/g, "")
+    .replace(/^(surah|chapter|juz)/, "")
+    .replace(/^al/, "");
+}
+
 function pickChapterFromGoal(goal: GoalSetup): number {
   const normalized = goal.target.toLowerCase().trim();
+  const compactTarget = normalizeGoalText(goal.target);
 
   if (goal.goalType === "khatam") {
     const juzMatch = normalized.match(/juz\s*(\d{1,2})/i);
@@ -86,7 +97,7 @@ function pickChapterFromGoal(goal: GoalSetup): number {
   }
 
   for (const [name, chapter] of Object.entries(SURAH_NAME_TO_CHAPTER)) {
-    if (normalized.includes(name)) {
+    if (normalized.includes(name) || compactTarget.includes(name)) {
       return chapter;
     }
   }
@@ -131,7 +142,7 @@ function filterThemeVerses(verses: VerseItem[], theme: string): VerseItem[] {
     return selectedKeywords.some((keyword) => text.includes(keyword));
   });
 
-  return filtered.length >= 8 ? filtered : verses;
+  return filtered.length ? filtered : verses;
 }
 
 function getTranslationId(language: string): number {

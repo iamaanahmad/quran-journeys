@@ -5,14 +5,18 @@ import {
   getQfOidcConfig,
 } from "@/lib/qf-oidc";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
+export const dynamic = "force-dynamic";
 
 const COOKIE_MAX_AGE = 60 * 10;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.QF_OAUTH_REDIRECT_URI?.replace(/\/api\/qf-auth\/callback$/, "") || url.origin).replace(/\/$/, "");
   const nextPath = url.searchParams.get("next") || "/app";
 
-  const config = getQfOidcConfig(url.origin);
+  const config = getQfOidcConfig(appUrl);
   const verifier = generatePkceVerifier();
   const challenge = generatePkceChallenge(verifier);
   const state = generateStateToken();
@@ -27,25 +31,33 @@ export async function GET(request: Request) {
   authUrl.searchParams.set("code_challenge_method", "S256");
 
   const response = NextResponse.redirect(authUrl.toString());
-  const secure = process.env.NODE_ENV === "production";
-  response.cookies.set("qf_oauth_state", state, {
+  
+  const isSecure = appUrl.startsWith("https");
+  
+  response.cookies.set({
+    name: "qf_oauth_state",
+    value: state,
     httpOnly: true,
     sameSite: "lax",
-    secure,
+    secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
-  response.cookies.set("qf_pkce_verifier", verifier, {
+  response.cookies.set({
+    name: "qf_pkce_verifier",
+    value: verifier,
     httpOnly: true,
     sameSite: "lax",
-    secure,
+    secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });
-  response.cookies.set("qf_oauth_next", nextPath, {
+  response.cookies.set({
+    name: "qf_oauth_next",
+    value: nextPath,
     httpOnly: true,
     sameSite: "lax",
-    secure,
+    secure: isSecure,
     path: "/",
     maxAge: COOKIE_MAX_AGE,
   });

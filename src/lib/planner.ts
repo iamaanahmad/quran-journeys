@@ -36,6 +36,14 @@ function getStartIndex(goal: GoalSetup, sourceVerses: typeof DEMO_VERSES): numbe
     }
   }
 
+  const compactTarget = normalizedTarget.replace(/[^a-z0-9]+/g, "");
+  if (compactTarget.includes("waqiah")) {
+    const index = sourceVerses.findIndex((verse) => verse.surah === 56);
+    if (index >= 0) {
+      return index;
+    }
+  }
+
   return 0;
 }
 
@@ -58,7 +66,9 @@ export function buildSevenDayPlan(
     const start = startIndex + day * ayahsPerDay;
     const verses = [];
     for (let index = 0; index < ayahsPerDay; index += 1) {
-      const verse = sourceVerses[start + index];
+      // Loop around to the beginning if we run out of demo verses
+      const realIndex = (start + index) % sourceVerses.length;
+      const verse = sourceVerses[realIndex];
       if (verse) {
         verses.push(verse);
       }

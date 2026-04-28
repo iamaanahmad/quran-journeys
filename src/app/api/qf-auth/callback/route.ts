@@ -1,5 +1,8 @@
 import { getQfOidcConfig } from "@/lib/qf-oidc";
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
+export const dynamic = "force-dynamic";
 
 const DAY = 60 * 60 * 24;
 
@@ -12,49 +15,43 @@ function toErrorRedirect(origin: string, nextPath: string, message: string) {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || process.env.QF_OAUTH_REDIRECT_URI?.replace(/\/api\/qf-auth\/callback$/, "") || url.origin).replace(/\/$/, "");
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const oauthError = url.searchParams.get("error");
 
-  const cookieHeader = request.headers.get("cookie") || "";
-  const cookies = Object.fromEntries(
-    cookieHeader
-      .split(";")
-      .map((part) => part.trim())
-      .filter(Boolean)
-      .map((part) => {
-        const idx = part.indexOf("=");
-        return [part.slice(0, idx), decodeURIComponent(part.slice(idx + 1))];
-      }),
-  );
+  const cookieStore = await cookies();
+  const qf_oauth_state = cookieStore.get("qf_oauth_state")?.value;
+  const qf_pkce_verifier = cookieStore.get("qf_pkce_verifier")?.value;
+  const qf_oauth_next = cookieStore.get("qf_oauth_next")?.value;
 
-  const nextPath = cookies.qf_oauth_next || "/app";
+  const nextPath = qf_oauth_next || "/app";
 
   if (oauthError) {
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, `oauth_${oauthError}`).toString(),
+      toErrorRedirect(appUrl, nextPath, `oauth_${oauthError}`).toString(),
     );
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, "missing_code_or_state").toString(),
+      toErrorRedirect(appUrl, nextPath, "missing_code_or_state").toString(),
     );
   }
 
-  if (!cookies.qf_oauth_state || cookies.qf_oauth_state !== state) {
+  if (!qf_oauth_state || qf_oauth_state !== state) {
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, "invalid_state").toString(),
+      toErrorRedirect(appUrl, nextPath, "invalid_state").toString(),
     );
   }
 
-  if (!cookies.qf_pkce_verifier) {
+  if (!qf_pkce_verifier) {
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, "missing_pkce_verifier").toString(),
+      toErrorRedirect(appUrl, nextPath, "missing_pkce_verifier").toString(),
     );
   }
 
-  const config = getQfOidcConfig(url.origin);
+  const config = getQfOidcConfig(appUrl);
   const tokenUrl = `${config.oauthBaseUrl}/oauth2/token`;
 
   const tokenResponse = await fetch(tokenUrl, {
@@ -62,21 +59,27 @@ export async function GET(request: Request) {
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       Accept: "application/json",
+      ...(config.clientSecret
+        ? {
+            Authorization: `Basic ${Buffer.from(
+              `${config.clientId}:${config.clientSecret}`,
+            ).toString("base64")}`,
+          }
+        : {}),
     },
     body: new URLSearchParams({
       grant_type: "authorization_code",
       code,
       redirect_uri: config.redirectUri,
       client_id: config.clientId,
-      code_verifier: cookies.qf_pkce_verifier,
-      ...(config.clientSecret ? { client_secret: config.clientSecret } : {}),
+      code_verifier: qf_pkce_verifier,
     }).toString(),
   });
 
   if (!tokenResponse.ok) {
     const errText = await tokenResponse.text();
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, `token_exchange_failed_${tokenResponse.status}:${errText.slice(0, 80)}`).toString(),
+      toErrorRedirect(appUrl, nextPath, `token_exchange_failed_${tokenResponse.status}:${errText.slice(0, 80)}`).toString(),
     );
   }
 
@@ -89,18 +92,20 @@ export async function GET(request: Request) {
 
   if (!payload.access_token) {
     return NextResponse.redirect(
-      toErrorRedirect(url.origin, nextPath, "missing_access_token").toString(),
+      toErrorRedirect(appUrl, nextPath, "missing_access_token").toString(),
     );
   }
 
-  const target = new URL(nextPath, url.origin);
+  const target = new URL(nextPath, appUrl);
   target.searchParams.set("qf", "connected");
 
   const response = NextResponse.redirect(target.toString());
   const expiresIn = Math.max(300, payload.expires_in ?? 3600);
-  const secure = process.env.NODE_ENV === "production";
+  const secure = appUrl.startsWith("https");
 
-  response.cookies.set("qf_access_token", payload.access_token, {
+  response.cookies.set({
+    name: "qf_access_token",
+    value: payload.access_token,
     httpOnly: true,
     sameSite: "lax",
     secure,
@@ -109,7 +114,9 @@ export async function GET(request: Request) {
   });
 
   if (payload.refresh_token) {
-    response.cookies.set("qf_refresh_token", payload.refresh_token, {
+    response.cookies.set({
+      name: "qf_refresh_token",
+      value: payload.refresh_token,
       httpOnly: true,
       sameSite: "lax",
       secure,
@@ -119,7 +126,9 @@ export async function GET(request: Request) {
   }
 
   if (payload.id_token) {
-    response.cookies.set("qf_id_token", payload.id_token, {
+    response.cookies.set({
+      name: "qf_id_token",
+      value: payload.id_token,
       httpOnly: true,
       sameSite: "lax",
       secure,
@@ -128,7 +137,9 @@ export async function GET(request: Request) {
     });
   }
 
-  response.cookies.set("qf_token_expires_at", String(Date.now() + expiresIn * 1000), {
+  response.cookies.set({
+    name: "qf_token_expires_at",
+    value: String(Date.now() + expiresIn * 1000),
     httpOnly: true,
     sameSite: "lax",
     secure,
@@ -136,9 +147,25 @@ export async function GET(request: Request) {
     maxAge: expiresIn,
   });
 
-  response.cookies.delete("qf_oauth_state");
-  response.cookies.delete("qf_pkce_verifier");
-  response.cookies.delete("qf_oauth_next");
+  // Clear OAuth state cookies
+  response.cookies.set({
+    name: "qf_oauth_state",
+    value: "",
+    maxAge: 0,
+    path: "/",
+  });
+  response.cookies.set({
+    name: "qf_pkce_verifier",
+    value: "",
+    maxAge: 0,
+    path: "/",
+  });
+  response.cookies.set({
+    name: "qf_oauth_next",
+    value: "",
+    maxAge: 0,
+    path: "/",
+  });
 
   return response;
 }
