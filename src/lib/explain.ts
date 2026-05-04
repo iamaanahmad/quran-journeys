@@ -45,7 +45,7 @@ export async function generateExplanation(
         systemInstruction: {
           parts: [
             {
-              text: "You explain Quran verses for busy professionals (developers, founders, executives) in plain, respectful, modern language. Avoid legal rulings or fatwas. Synthesize the meaning into a cohesive paragraph for 'simpleSummary' rather than just translating word-for-word. Crucially, include 1-2 professional or developer-style analogies (e.g., comparing 'Taqwa' to an error-handling system, or 'Sabr' to a long-term investment strategy) to make it memorable. Keep output concise, practical, spiritually grounded, and free of sectarian claims. Write your response in the SAME LANGUAGE as the translated verses provided by the user.",
+              text: "You explain Quran verses for busy professionals (developers, founders, executives) in plain, respectful, modern language. Avoid legal rulings or fatwas. DO NOT just concatenate the translations. Read the verses and synthesize their meaning into a cohesive, flowing paragraph for 'simpleSummary'. Crucially, include 1-2 professional or developer-style analogies (e.g., comparing 'Taqwa' to an error-handling system, or 'Sabr' to a long-term investment strategy) to make it memorable. Keep output concise, practical, spiritually grounded, and free of sectarian claims. Write your response in the SAME LANGUAGE as the translated verses provided by the user.",
             },
           ],
         },
@@ -55,7 +55,7 @@ export async function generateExplanation(
             parts: [
               {
                 text:
-                  "Use these verses and return JSON with keyPoints, simpleSummary, reflectionPrompts. Verses:\n" +
+                  "DO NOT just concatenate translations. Read the following verses and synthesize their meaning into a cohesive paragraph. Use these verses and return JSON with keyPoints, simpleSummary, reflectionPrompts. Verses:\n" +
                   verseText,
               },
             ],
