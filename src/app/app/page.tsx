@@ -49,7 +49,9 @@ type SessionStep = "read" | "understand" | "reflect";
 type AppView = "dashboard" | "session" | "plan" | "insights";
 
 function toDateOnly(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  const offset = date.getTimezoneOffset();
+  const adjustedDate = new Date(date.getTime() - offset * 60 * 1000);
+  return adjustedDate.toISOString().slice(0, 10);
 }
 
 function calculateStreak(logs: SessionLog[]): number {
@@ -194,8 +196,6 @@ export default function Home() {
     source: "not-synced",
     message: "Not synced yet",
   });
-const [circleMembers, setCircleMembers] = useState<string[]>([]);
-  const [newCircleMember, setNewCircleMember] = useState("");
   const [tourDismissed, setTourDismissed] = useState(false);
   const [runtimeNotice, setRuntimeNotice] = useState("");
   const [sessionFeedbackMessage, setSessionFeedbackMessage] = useState("");
@@ -222,20 +222,6 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
   );
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(CIRCLE_MEMBERS_KEY);
-    if (!raw) {
-      return;
-    }
-
-    try {
-      const parsed = JSON.parse(raw) as string[];
-      setCircleMembers(parsed.slice(0, 3));
-    } catch {
-      window.localStorage.removeItem(CIRCLE_MEMBERS_KEY);
-    }
-  }, []);
-
-  useEffect(() => {
     const handlePlay = (e: Event) => {
       const audios = document.getElementsByTagName('audio');
       for (let i = 0; i < audios.length; i++) {
@@ -252,10 +238,6 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
     const dismissed = window.localStorage.getItem(TOUR_DISMISSED_KEY);
     setTourDismissed(dismissed === "1");
   }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem(CIRCLE_MEMBERS_KEY, JSON.stringify(circleMembers));
-  }, [circleMembers]);
 
   useEffect(() => {
     if (!state) {
@@ -306,26 +288,6 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
     return buildWeeklyInsight(state?.logs ?? []);
   }, [state]);
 
-  function addCircleMember() {
-    const trimmed = newCircleMember.trim();
-    if (!trimmed) {
-      return;
-    }
-
-    setCircleMembers((previous) => {
-      if (previous.includes(trimmed) || previous.length >= 3) {
-        return previous;
-      }
-      return [...previous, trimmed];
-    });
-
-    setNewCircleMember("");
-  }
-
-  function removeCircleMember(member: string) {
-    setCircleMembers((previous) => previous.filter((item) => item !== member));
-  }
-
   function dismissTour() {
     setTourDismissed(true);
     window.localStorage.setItem(TOUR_DISMISSED_KEY, "1");
@@ -340,7 +302,6 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
       `Average clarity: ${weeklyInsight.averageClarity}`,
       `Consistency score: ${weeklyInsight.consistencyScore}/100`,
       `Current streak: ${streak} days`,
-      `Circle: ${circleMembers.length ? circleMembers.join(", ") : "No members yet"}`,
     ].join("\n");
 
     try {
@@ -526,10 +487,14 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
             source: "local",
             message: "Progress tracked locally. Sign in to sync across devices.",
           });
+          return;
         } catch {
           window.localStorage.removeItem(STORAGE_KEY);
         }
       }
+      
+      // Redirect to onboarding if no active journey exists
+      window.location.replace("/");
     }
 
     void bootstrap();
@@ -595,7 +560,7 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
     const adaptedPlan = adjustRemainingPlan(updatedPlan, lengthRating);
 
     const log: SessionLog = {
-      date: currentDay.date,
+      date: toDateOnly(new Date()),
       completed: true,
       lengthRating,
       clarityRating,
@@ -979,7 +944,7 @@ const [circleMembers, setCircleMembers] = useState<string[]>([]);
                   <button
                     type="button"
                     onClick={() => {
-                      const shareText = `I just completed a session on Quran Journeys! I'm on a ${streak}-day streak and have finished ${progress}% of my goal. Join me: https://quranjourneys.app`;
+                      const shareText = `I just completed a session on Quran Journeys! I'm on a ${streak}-day streak and have finished ${progress}% of my goal. Join me: https://quranjourneys.netlify.app`;
                       navigator.clipboard.writeText(shareText);
                       alert("Progress copied to clipboard!");
                     }}

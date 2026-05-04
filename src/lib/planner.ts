@@ -8,7 +8,9 @@ function clamp(value: number, min: number, max: number): number {
 function formatISODate(offsetDays: number): string {
   const date = new Date();
   date.setDate(date.getDate() + offsetDays);
-  return date.toISOString().slice(0, 10);
+  const offset = date.getTimezoneOffset();
+  const adjusted = new Date(date.getTime() - offset * 60 * 1000);
+  return adjusted.toISOString().slice(0, 10);
 }
 
 export function estimateAyahsPerDay(minutes: number): number {
@@ -66,8 +68,10 @@ export function buildSevenDayPlan(
     const start = startIndex + day * ayahsPerDay;
     const verses = [];
     for (let index = 0; index < ayahsPerDay; index += 1) {
-      // Loop around to the beginning if we run out of demo verses
-      const realIndex = (start + index) % sourceVerses.length;
+      const realIndex = start + index;
+      if (realIndex >= sourceVerses.length) {
+        break; // Stop adding verses if we run out, prevent wrapping bug
+      }
       const verse = sourceVerses[realIndex];
       if (verse) {
         verses.push(verse);
