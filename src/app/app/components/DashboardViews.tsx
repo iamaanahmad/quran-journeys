@@ -55,8 +55,8 @@ export function DashboardView({
         </div>
       </div>
 
-      {/* Action card */}
-      <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      {/* Action area — separated by divider, not a nested card */}
+      <div className="mt-8 border-t border-slate-200 pt-6">
         {completedDays >= state.plan.length ? (
           <div className="text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl">

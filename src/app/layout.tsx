@@ -71,7 +71,7 @@ export default function RootLayout({
       className={`${manrope.variable} ${naskh.variable} h-full antialiased`}
       translate="no"
     >
-      <body className="min-h-full bg-[radial-gradient(circle_at_top,_#f7f1d8_0%,_#f8f4e8_35%,_#e8efe6_100%)] text-slate-900">
+      <body className="min-h-screen bg-[radial-gradient(circle_at_top,_#f7f1d8_0%,_#f8f4e8_35%,_#e8efe6_100%)] text-slate-900">
         <script
           dangerouslySetInnerHTML={{
             __html: `
