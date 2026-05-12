@@ -156,8 +156,8 @@ export default function AppPage() {
   // --- Bootstrap ---
   useEffect(() => {
     void refreshQf();
-    // Periodically check and refresh QF token (every 5 min)
-    const interval = setInterval(() => void refreshQf(), 5 * 60 * 1000);
+    // Periodically check and refresh QF token (every 1 min to catch 5-min expiries)
+    const interval = setInterval(() => void refreshQf(), 1 * 60 * 1000);
     const p = new URLSearchParams(window.location.search);
     if (p.get("qf") === "connected") {
       setRuntimeNotice("Quran account connected. User APIs are now available.");
@@ -295,7 +295,7 @@ export default function AppPage() {
                 <>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                     <p className="text-sm text-slate-700">Signed in as <span className="font-semibold">{authUser.name}</span></p>
-                    <p className="text-xs text-slate-500">Quran.com: {qfConnected ? "Connected" : "Not connected"}{qfConnected && qfExpiry ? ` · expires ${new Date(qfExpiry).toLocaleDateString()}` : ""}</p>
+                    <p className="text-xs text-slate-500">Quran.com: {qfConnected ? "Connected" : "Not connected"}{qfConnected && qfExpiry ? ` · expires ${new Date(qfExpiry).toLocaleDateString()} ${new Date(qfExpiry).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ""}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     {qfConnected ? (

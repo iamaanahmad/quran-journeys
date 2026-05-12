@@ -50,9 +50,8 @@ export function getQfOidcConfig(origin?: string): QfOidcConfig {
     (originUrl ? `${originUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "") ||
     (appUrl ? `${appUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "");
 
-  // Keep default scope minimal for broad provider compatibility.
-  // Overriding explicitly to "openid" to bypass any strict environment misconfigurations.
-  const scope = "openid";
+  // Expanded scopes to support bookmarks, activity days, posts, and refresh tokens (offline_access).
+  const scope = "openid profile email offline_access bookmark activity_day post";
 
   if (!clientId) {
     throw new Error("Missing QF_CLIENT_ID (or QURAN_CLIENT_ID)");
