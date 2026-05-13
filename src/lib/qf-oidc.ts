@@ -50,9 +50,9 @@ export function getQfOidcConfig(origin?: string): QfOidcConfig {
     (originUrl ? `${originUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "") ||
     (appUrl ? `${appUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "");
 
-  // Verified scopes from QF documentation. Profile/email are removed as they often cause invalid_scope.
-  // 'post' is temporarily removed to ensure login works; check granular permissions like post.update if needed.
-  const scope = "openid offline_access bookmark reading_session activity_day";
+  // Minimal set of scopes: openid (auth), offline_access (refresh token), and bookmark (to fix 403 error).
+  // reading_session and activity_day are removed for now as they may cause 'oauth_invalid_scope'.
+  const scope = "openid offline_access bookmark";
 
   if (!clientId) {
     throw new Error("Missing QF_CLIENT_ID (or QURAN_CLIENT_ID)");
