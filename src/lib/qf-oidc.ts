@@ -9,8 +9,8 @@ export interface QfOidcConfig {
 }
 
 const defaultOauthByEnv: Record<string, string> = {
-  production: "https://apis.quran.foundation/auth",
-  prelive: "https://apis-prelive.quran.foundation/auth",
+  production: "https://oauth2.quran.foundation",
+  prelive: "https://prelive-oauth2.quran.foundation",
 };
 
 function base64Url(input: Buffer): string {
@@ -50,9 +50,10 @@ export function getQfOidcConfig(origin?: string): QfOidcConfig {
     (originUrl ? `${originUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "") ||
     (appUrl ? `${appUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "");
 
-  // Minimal set of scopes: openid (auth), offline_access (refresh token), and bookmark (to fix 403 error).
-  // reading_session and activity_day are removed for now as they may cause 'oauth_invalid_scope'.
-  const scope = "openid offline_access bookmark";
+  // We hardcode the scopes to a known working set that includes bookmarks and activity.
+  // We avoid 'profile', 'email', and 'post' which can trigger 'oauth_invalid_scope'.
+  // This ensures we get the necessary permissions for user data sync.
+  const scope = "openid offline_access bookmark reading_session activity_day";
 
   if (!clientId) {
     throw new Error("Missing QF_CLIENT_ID (or QURAN_CLIENT_ID)");
