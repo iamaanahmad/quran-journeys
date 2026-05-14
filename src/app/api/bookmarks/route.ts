@@ -106,14 +106,23 @@ export async function POST(request: Request) {
   const url = `${getBaseUrl()}/v1/bookmarks`;
 
   try {
+    const payload: any = {
+      type: body.type ?? "ayah",
+      mushafId: body.mushafId ?? 2,
+    };
+
+    if (payload.type === "ayah") {
+      const [surah, ayah] = body.key.split(":").map(Number);
+      payload.key = surah;
+      payload.verseNumber = ayah;
+    } else {
+      payload.key = Number(body.key);
+    }
+
     const response = await fetch(url, {
       method: "POST",
       headers: buildHeaders(token),
-      body: JSON.stringify({
-        key: body.key,
-        mushafId: body.mushafId ?? 2,
-        type: body.type ?? "ayah",
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -157,12 +166,19 @@ export async function DELETE(request: Request) {
     );
   }
 
-  const url = `${getBaseUrl()}/v1/bookmarks/${encodeURIComponent(key)}`;
+  // Use the 'delete by details' endpoint to support deleting by verse key
+  const url = `${getBaseUrl()}/v1/collections/__default__/bookmarks`;
 
   try {
+    const [surah, ayah] = key.split(":").map(Number);
     const response = await fetch(url, {
       method: "DELETE",
       headers: buildHeaders(token),
+      body: JSON.stringify({
+        key: surah,
+        verseNumber: ayah,
+        type: "ayah",
+      }),
     });
 
     if (!response.ok) {
