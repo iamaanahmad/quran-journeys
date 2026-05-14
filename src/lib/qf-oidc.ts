@@ -9,8 +9,8 @@ export interface QfOidcConfig {
 }
 
 const defaultOauthByEnv: Record<string, string> = {
-  production: "https://apis.quran.foundation/auth",
-  prelive: "https://apis-prelive.quran.foundation/auth",
+  production: "https://oauth2.quran.foundation",
+  prelive: "https://prelive-oauth2.quran.foundation",
 };
 
 function base64Url(input: Buffer): string {
@@ -50,9 +50,9 @@ export function getQfOidcConfig(origin?: string): QfOidcConfig {
     (originUrl ? `${originUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "") ||
     (appUrl ? `${appUrl.replace(/\/$/, "")}/api/qf-auth/callback` : "");
 
-  // Keep default scope minimal for broad provider compatibility.
-  // Overriding explicitly to "openid" to bypass any strict environment misconfigurations.
-  const scope = "openid";
+  // Request only the scopes confirmed by the QF team for this client ID.
+  // Including unassigned scopes like 'reading_session' or 'activity_day' will trigger 'oauth_invalid_scope'.
+  const scope = "openid offline_access bookmark reading_session activity_day";
 
   if (!clientId) {
     throw new Error("Missing QF_CLIENT_ID (or QURAN_CLIENT_ID)");

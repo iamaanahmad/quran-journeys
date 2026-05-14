@@ -137,33 +137,32 @@ function AuthPageContent() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-[radial-gradient(circle_at_top,_#f7f1d8_0%,_#f8f4e8_35%,_#e8efe6_100%)] px-4 py-10 text-slate-900 md:px-8">
-      <div className="pointer-events-none absolute inset-0 opacity-25 [background:linear-gradient(120deg,transparent_0%,rgba(13,95,78,0.08)_25%,transparent_55%),linear-gradient(0deg,rgba(189,147,69,0.06),rgba(189,147,69,0.06))]" />
+    <div className="flex min-h-[calc(100vh-180px)] items-center justify-center py-4">
+      <main className="mx-auto grid w-full max-w-lg gap-8 md:max-w-4xl md:grid-cols-[1.1fr_1fr] md:gap-6">
+        <section className="space-y-5">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-900/80">
+              Quran Journeys
+            </p>
+            <h1 className="mt-1 text-3xl font-bold tracking-tight md:text-4xl">{pageTitle}</h1>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              Sign in for synced persistence, or continue as guest for an instant walkthrough.
+            </p>
+          </div>
 
-      <main className="relative mx-auto grid w-full max-w-4xl gap-6 rounded-3xl border border-emerald-900/15 bg-white/80 p-6 backdrop-blur-md md:grid-cols-[1.1fr_1fr] md:p-8">
-        <section className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-900/80">
-            Quran Journeys
-          </p>
-          <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{pageTitle}</h1>
-          <p className="text-sm leading-7 text-slate-700">
-            Keep your experience simple for judging: sign in for synced persistence,
-            or return and continue as guest for instant walkthrough.
-          </p>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="rounded-2xl border border-slate-200/80 bg-white/70 p-4 backdrop-blur-sm">
             <p className="text-sm font-semibold">Quick actions</p>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
               <button
                 onClick={loginAsDemo}
                 disabled={!canUseDemo || loading}
-                className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-xl bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-amber-500 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Use Demo Account
               </button>
               <Link
                 href="/"
-                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
                 Continue as Guest
               </Link>
@@ -171,32 +170,32 @@ function AuthPageContent() {
           </div>
         </section>
 
-        <section className="grid content-start gap-4 rounded-2xl border border-emerald-900/10 bg-white p-4 md:p-5">
+        <section className="grid content-start gap-4 rounded-2xl border border-emerald-900/10 bg-white/80 p-5 backdrop-blur-sm md:p-6">
           <div className="flex gap-2 rounded-xl bg-slate-100 p-1 text-sm font-semibold">
             <button
               onClick={() => setMode("login")}
-              className={`flex-1 rounded-lg px-3 py-2 transition ${
-                mode === "login" ? "bg-white text-slate-900" : "text-slate-600"
+              className={`flex-1 rounded-lg px-3 py-2.5 transition ${
+                mode === "login" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
               }`}
             >
               Log In
             </button>
             <button
               onClick={() => setMode("signup")}
-              className={`flex-1 rounded-lg px-3 py-2 transition ${
-                mode === "signup" ? "bg-white text-slate-900" : "text-slate-600"
+              className={`flex-1 rounded-lg px-3 py-2.5 transition ${
+                mode === "signup" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"
               }`}
             >
               Sign Up
             </button>
           </div>
 
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1.5 text-sm font-medium">
             Email
             <input
               type="email"
               autoComplete="email"
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2"
+              className="rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="you@example.com"
@@ -204,11 +203,11 @@ function AuthPageContent() {
           </label>
 
           {mode === "signup" ? (
-            <label className="grid gap-1 text-sm">
+            <label className="grid gap-1.5 text-sm font-medium">
               Display name
               <input
                 autoComplete="name"
-                className="rounded-xl border border-slate-300 bg-white px-3 py-2"
+                className="rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Amaan"
@@ -216,12 +215,12 @@ function AuthPageContent() {
             </label>
           ) : null}
 
-          <label className="grid gap-1 text-sm">
+          <label className="grid gap-1.5 text-sm font-medium">
             Password
             <input
               type="password"
               autoComplete={mode === "login" ? "current-password" : "new-password"}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2"
+              className="rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 transition focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
@@ -234,7 +233,7 @@ function AuthPageContent() {
           <button
             onClick={() => void handleSubmit()}
             disabled={loading || !email || !password}
-            className="rounded-xl bg-emerald-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-xl bg-emerald-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading
               ? mode === "login"
@@ -245,7 +244,7 @@ function AuthPageContent() {
                 : "Create Account"}
           </button>
 
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-slate-500">
             By continuing, you agree to our {" "}
             <Link href="/terms" className="font-semibold text-emerald-900 underline">
               Terms
